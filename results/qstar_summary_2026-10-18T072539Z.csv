@@ -1,0 +1,2 @@
+market,q_star_low_usd,q_star_high_usd,borrow_usd,threshold,low_pct_of_borrow,high_pct_of_borrow,s_o_at_start_pct,status,oracle_price,snapshot_utc
+PT-sUSDS-26NOV2026,17619921.875,17798437.5,16149999.999999998,0.025500000000000078,109.10168343653253,110.20704334365327,-0.8317987180000097,ok,0.9862125263191274,2026-10-18T072539Z
