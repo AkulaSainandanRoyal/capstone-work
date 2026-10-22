@@ -1,0 +1,12 @@
+{
+ "Morpho": [
+  "out/IMorpho.sol/IMorpho.json",
+  "out/EventsLib.sol/EventsLib.json"
+ ],
+ "Oracle": [
+  "out/IOracle.sol/IOracle.json"
+ ],
+ "ERC20": [
+  "out/IERC20.sol/IERC20.json"
+ ]
+}
