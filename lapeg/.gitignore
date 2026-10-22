@@ -1,0 +1,18 @@
+# forge
+out/
+cache/
+lib/
+
+# python
+__pycache__/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# local data: RPC cache, anvil logs, Sourcify responses
+data/raw/*
+!data/raw/.gitkeep
+
+# secrets
+.env

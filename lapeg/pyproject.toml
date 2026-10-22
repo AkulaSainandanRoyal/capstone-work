@@ -1,0 +1,46 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "lapeg"
+version = "0.0.1"
+description = "Liquidity-Aware Pre-Execution Guard for DeFi lending (research prototype)"
+requires-python = ">=3.11"
+dependencies = [
+    "web3>=7,<8",
+    "pydantic>=2,<3",
+    "pyyaml>=6",
+    "pandas>=2",
+    "requests>=2.31",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "ruff>=0.6", "mypy>=1.10", "types-PyYAML", "types-requests"]
+
+[tool.setuptools.packages.find]
+include = ["lapeg*"]
+
+[tool.setuptools.package-data]
+"lapeg.chain" = ["abis/*.json"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+filterwarnings = ["ignore:websockets.legacy is deprecated:DeprecationWarning"]
+markers = [
+    "fork: needs anvil and an RPC (set ARCHIVE_RPC_URL, or a recent block on the public fallback RPC)",
+]
+
+[tool.ruff]
+line-length = 110
+target-version = "py311"
+extend-exclude = ["lib", "out", "cache"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+
+[tool.mypy]
+python_version = "3.11"
+ignore_missing_imports = true
+check_untyped_defs = false
+warn_unused_ignores = false
