@@ -1,0 +1,55 @@
+{
+ "markets": [
+  {
+   "name": "PT-reUSD-10DEC2026",
+   "market_id": "0x1e9d614631a7df0ec07fb05b2c8cb2491575fd1a63a33bf187a6afb295a4fc64",
+   "loan_token": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+   "collateral_token": "0xeCfaFdC7741323a945A163ed068B5a3C43483957",
+   "oracle": "0x217d6DdCDB95112C51657F6270e8C079CFDB51f0",
+   "irm": "0x870aC11D48B15DB9a138Cf899d20F13F79Ba00BC",
+   "lltv_wad": "915000000000000000",
+   "field_matches": {
+    "collateral_token": true,
+    "oracle": true,
+    "lltv": true
+   }
+  },
+  {
+   "name": "PT-USD3-17DEC2026",
+   "market_id": "0xf8c5aa31ea6b2a068a9eddb46dd110cae57bf0f12be9583a3f9a818effecba89",
+   "loan_token": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+   "collateral_token": "0x7f47c3e6b2c00fC4eB4d5Ae50d0Ab0Ab6888Eb4D",
+   "oracle": "0xe5E6Ec063E63A9D0c6Ac041d0AD2bd03F7f08d72",
+   "irm": "0x870aC11D48B15DB9a138Cf899d20F13F79Ba00BC",
+   "lltv_wad": "860000000000000000",
+   "field_matches": {
+    "collateral_token": true,
+    "oracle": true,
+    "lltv": true
+   }
+  },
+  {
+   "name": "PT-sUSDS-26NOV2026",
+   "market_id": "0x22fe4c688161863c73571a2b8db65cc11a4a6bceee4f0dea4aa83e4b784f1bd9",
+   "loan_token": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+   "collateral_token": "0xdC169AbE56461A2E0c034Da431Ac2a3ebf596094",
+   "oracle": "0x3464a61A68C486241FE07201C913F055Bdce35BF",
+   "irm": "0x870aC11D48B15DB9a138Cf899d20F13F79Ba00BC",
+   "lltv_wad": "915000000000000000",
+   "field_matches": {
+    "collateral_token": true,
+    "oracle": true,
+    "lltv": true
+   }
+  }
+ ],
+ "dataset": "morpho_pt_markets_clean.csv",
+ "api": "https://api.morpho.org/graphql",
+ "query": "{ morphoBlues(where: {chainId_in: [1]}) { items { address creationBlockNumber chain { id } } } }",
+ "retrieved_utc": "2026-10-22T17:04:36Z",
+ "verified_on_chain": {
+  "rpc": "https://ethereum-rpc.publicnode.com",
+  "block": 26249532,
+  "method": "eth_getCode + idToMarketParams(id)"
+ }
+}

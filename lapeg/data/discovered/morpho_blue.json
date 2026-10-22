@@ -1,0 +1,19 @@
+{
+ "chain_id": 1,
+ "address": "0xBBBBBbbBBb9cC5e90e3b3Af64bdAF62C37EEFFCb",
+ "creation_block": 18883124,
+ "checks": {
+  "has_code": true,
+  "PT-reUSD-10DEC2026_matches_dataset": true,
+  "PT-USD3-17DEC2026_matches_dataset": true,
+  "PT-sUSDS-26NOV2026_matches_dataset": true
+ },
+ "api": "https://api.morpho.org/graphql",
+ "query": "{ morphoBlues(where: {chainId_in: [1]}) { items { address creationBlockNumber chain { id } } } }",
+ "retrieved_utc": "2026-10-22T17:04:36Z",
+ "verified_on_chain": {
+  "rpc": "https://ethereum-rpc.publicnode.com",
+  "block": 26249532,
+  "method": "eth_getCode + idToMarketParams(id)"
+ }
+}
