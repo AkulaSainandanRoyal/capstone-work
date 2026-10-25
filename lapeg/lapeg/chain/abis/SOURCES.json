@@ -11,5 +11,23 @@
  ],
  "HealthReader": [
   "out/HealthReader.sol/HealthReader.json"
+ ],
+ "PendleActionSwapPT": [
+  "sourcify:1:0x9d215290f43366bbceff40a79fbac9dd23325379 (ActionSwapPTV3)"
+ ],
+ "PendleMarket": [
+  "sourcify:1:0x13285bcbc27f92b47b4edb99d744c07b48c977c0 (PendleMarketV7)"
+ ],
+ "PendleSY": [
+  "sourcify:1:0xba923d186156e48baab7e3c749e10f06e0b25067 (PendleREUSDSY)"
+ ],
+ "OjoPTFeed": [
+  "sourcify:1:0x5AAb95E3C6F9bA0CCfa0a17c2C7235633C7C6585 (OjoPTFeed)"
+ ],
+ "MorphoChainlinkOracleV2": [
+  "sourcify:1:0x217d6DdCDB95112C51657F6270e8C079CFDB51f0 (MorphoChainlinkOracleV2)"
+ ],
+ "MockAggregator": [
+  "out/MockAggregator.sol/MockAggregator.json"
  ]
 }

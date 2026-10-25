@@ -192,6 +192,10 @@ class AnvilFork:
         """Overwrite one storage word (the RPC equivalent of forge's vm.store)."""
         self.rpc("anvil_setStorageAt", [Web3.to_checksum_address(address), _word(slot), _word(value)])
 
+    def set_code(self, address: str, code: str) -> None:
+        """Replace an account's runtime code (anvil_setCode). No constructor runs."""
+        self.rpc("anvil_setCode", [Web3.to_checksum_address(address), code])
+
     # ---------- time and blocks ----------
     def increase_time(self, seconds: int) -> None:
         self.rpc("evm_increaseTime", [seconds])

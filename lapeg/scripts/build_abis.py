@@ -25,8 +25,12 @@ TARGETS = {
     "Oracle": [("IOracle.sol", "IOracle")],
     "ERC20": [("IERC20.sol", "IERC20")],
     "HealthReader": [("HealthReader.sol", "HealthReader")],
+    "MockAggregator": [("MockAggregator.sol", "MockAggregator")],
 }
-RUNTIME = {"HealthReader": ("HealthReader.sol", "HealthReader")}   # helpers whose runtime code we inject
+RUNTIME = {  # helpers whose runtime code is injected (state override or anvil_setCode)
+    "HealthReader": ("HealthReader.sol", "HealthReader"),
+    "MockAggregator": ("MockAggregator.sol", "MockAggregator"),
+}
 BYTECODE_DIR = ROOT / "lapeg" / "chain" / "bytecode"
 
 
@@ -45,7 +49,8 @@ def main() -> None:
         subprocess.run(["forge", "build"], cwd=ROOT, check=True)
 
     ABI_DIR.mkdir(parents=True, exist_ok=True)
-    sources = {}
+    sources_path = ABI_DIR / "SOURCES.json"     # merged: fetch_verified_abis.py writes entries here too
+    sources = json.loads(sources_path.read_text()) if sources_path.exists() else {}
     for name, parts in TARGETS.items():
         abi: list[dict] = []
         for source, contract in parts:
@@ -53,7 +58,7 @@ def main() -> None:
         (ABI_DIR / f"{name}.json").write_text(json.dumps(abi, indent=1) + "\n")
         sources[name] = [f"out/{s}/{c}.json" for s, c in parts]
         print(f"{name}: {len(abi)} entries")
-    (ABI_DIR / "SOURCES.json").write_text(json.dumps(sources, indent=1) + "\n")
+    sources_path.write_text(json.dumps(sources, indent=1) + "\n")
 
     BYTECODE_DIR.mkdir(parents=True, exist_ok=True)
     for name, (source, contract) in RUNTIME.items():
