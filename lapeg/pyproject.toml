@@ -18,6 +18,7 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = ["pytest>=8", "ruff>=0.6", "mypy>=1.10", "types-PyYAML", "types-requests"]
+app = ["streamlit>=1.40", "plotly>=5.24"]
 
 [tool.setuptools.packages.find]
 include = ["lapeg*"]
