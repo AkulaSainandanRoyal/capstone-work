@@ -8,8 +8,11 @@ import sys
 
 from lapeg.config import load_experiment
 from lapeg.fork.smoke import run_fork_smoke
+from lapeg.market.experiment import run_position_book
 
-RUNNERS = {"phase0_fork_smoke": run_fork_smoke}
+RUNNERS = {"phase0_fork_smoke": run_fork_smoke, "phase1_position_book": run_position_book}
+SUMMARY_KEYS = ("experiment", "rpc_source", "fork_block", "block_pinned", "n_events", "n_accounts",
+                "n_borrowers", "max_hf_rel_error", "min_health_factor", "seconds", "checks", "passed")
 
 
 def main() -> None:
@@ -20,8 +23,7 @@ def main() -> None:
     if runner is None:
         raise SystemExit(f"no runner for experiment '{cfg.name}' (known: {', '.join(RUNNERS)})")
     result = runner(cfg)
-    print(json.dumps({k: result[k] for k in ("experiment", "rpc_source", "fork_block", "block_pinned",
-                                             "checks", "passed")}, indent=1))
+    print(json.dumps({k: result[k] for k in SUMMARY_KEYS if k in result}, indent=1, default=str))
     if not result["passed"]:
         raise SystemExit(1)
 

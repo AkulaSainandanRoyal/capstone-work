@@ -23,10 +23,10 @@ BlockId = BlockIdentifier
 
 @dataclass(frozen=True)
 class MarketParams:
-    loan_token: str
-    collateral_token: str
-    oracle: str
-    irm: str
+    loan_token: ChecksumAddress
+    collateral_token: ChecksumAddress
+    oracle: ChecksumAddress
+    irm: ChecksumAddress
     lltv: int   # WAD (1e18 = 100%)
 
     def as_tuple(self) -> tuple[Any, ...]:

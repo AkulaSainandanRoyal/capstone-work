@@ -36,6 +36,16 @@ class ForkConfig(BaseModel):
     startup_timeout_s: float = 90.0
 
 
+class LogsConfig(BaseModel):
+    """Where event logs come from. Separate from the fork RPC: free tiers cap log ranges differently."""
+
+    rpc_url_env: str = "LOGS_RPC_URL"
+    fallback_rpc_url: str | None = None
+    chunk: int = Field(default=10_000, ge=1)       # blocks per eth_getLogs; halved on range errors
+    min_chunk: int = Field(default=50, ge=1)
+    pause_s: float = Field(default=0.5, ge=0)      # pause between requests (rate limits)
+
+
 class MarketRef(BaseModel):
     name: str
     market_id: str
@@ -53,6 +63,7 @@ class ExperimentConfig(BaseModel):
     name: str
     seed: int = 0
     fork: ForkConfig
+    logs: LogsConfig | None = None
     morpho_discovery: Path = Path("data/discovered/morpho_blue.json")
     market: MarketRef
     cache_path: Path = Path("data/raw/rpc_cache.sqlite")
@@ -69,14 +80,14 @@ def load_experiment(path: str | Path) -> ExperimentConfig:
         return ExperimentConfig.model_validate(yaml.safe_load(f))
 
 
-def resolve_rpc_url(fork: ForkConfig) -> tuple[str, str]:
-    """Return (url, source). source is the env var name, or 'fallback' for the non-archive default."""
-    url = os.environ.get(fork.rpc_url_env)
+def resolve_rpc_url(src: ForkConfig | LogsConfig) -> tuple[str, str]:
+    """Return (url, source). source is the env var name, or 'fallback: <url>' for the public default."""
+    url = os.environ.get(src.rpc_url_env)
     if url:
-        return url, fork.rpc_url_env
-    if fork.fallback_rpc_url:
-        return fork.fallback_rpc_url, "fallback"
-    raise RuntimeError(f"set {fork.rpc_url_env} (an archive RPC URL) or give fork.fallback_rpc_url")
+        return url, src.rpc_url_env
+    if src.fallback_rpc_url:
+        return src.fallback_rpc_url, "fallback"
+    raise RuntimeError(f"set {src.rpc_url_env} or give a fallback_rpc_url")
 
 
 def resolve_fork_block(fork: ForkConfig, head: int) -> tuple[int, bool]:

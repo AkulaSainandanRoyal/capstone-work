@@ -1,0 +1,31 @@
+# Phase 1 (lite): position book for the LAPEG v0 market, health factors checked against Morpho's own code.
+# Run: python scripts/run_experiment.py experiments/phase1_position_book.yaml
+name: phase1_position_book
+seed: 0
+
+fork:
+  rpc_url_env: ARCHIVE_RPC_URL
+  fallback_rpc_url: https://eth.drpc.org     # free public archive endpoint (no key)
+  block: 26267600                            # pinned: 2026-10-25 (same block as the Phase 0 smoke test)
+  anvil_args: ["--retries", "10", "--fork-retry-backoff", "1000", "--timeout", "60000"]
+
+# Event logs from market creation to the fork block. Kept separate from the fork RPC: drpc's free tier caps
+# eth_getLogs at about 100 blocks, which would mean ~9,400 requests here. MEV Blocker (also free, no key)
+# serves 10,000-block ranges. Responses are cached in cache_path, so reruns make no log requests.
+logs:
+  rpc_url_env: LOGS_RPC_URL
+  fallback_rpc_url: https://rpc.mevblocker.io
+  chunk: 10000
+  min_chunk: 50
+  pause_s: 1.0
+
+morpho_discovery: data/discovered/morpho_blue.json
+market:
+  name: PT-reUSD-10DEC2026
+  market_id: "0x1e9d614631a7df0ec07fb05b2c8cb2491575fd1a63a33bf187a6afb295a4fc64"
+
+cache_path: data/raw/rpc_cache.sqlite
+results_dir: data/results
+
+params:
+  hf_rel_tol: 1.0e-9    # spec acceptance: health factors match Morpho to within 1e-9 relative error

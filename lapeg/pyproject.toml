@@ -13,6 +13,7 @@ dependencies = [
     "pyyaml>=6",
     "pandas>=2",
     "requests>=2.31",
+    "pyarrow>=15",
 ]
 
 [project.optional-dependencies]
@@ -22,13 +23,14 @@ dev = ["pytest>=8", "ruff>=0.6", "mypy>=1.10", "types-PyYAML", "types-requests"]
 include = ["lapeg*"]
 
 [tool.setuptools.package-data]
-"lapeg.chain" = ["abis/*.json"]
+"lapeg.chain" = ["abis/*.json", "bytecode/*.hex"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 filterwarnings = ["ignore:websockets.legacy is deprecated:DeprecationWarning"]
 markers = [
-    "fork: needs anvil and an RPC (set ARCHIVE_RPC_URL, or a recent block on the public fallback RPC)",
+    "fork: needs anvil and an RPC (ARCHIVE_RPC_URL, or the free public archive fallback)",
+    "slow: long-running (first run fetches all market events; later runs use the local RPC cache)",
 ]
 
 [tool.ruff]
