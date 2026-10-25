@@ -200,5 +200,10 @@ class AnvilFork:
     def increase_time(self, seconds: int) -> None:
         self.rpc("evm_increaseTime", [seconds])
 
+    def set_block_interval(self, seconds: int) -> None:
+        """Every new block's timestamp = previous block's + `seconds`, independent of the wall clock.
+        After a revert the next block again follows the restored head, so runs are reproducible."""
+        self.rpc("anvil_setBlockTimestampInterval", [seconds])
+
     def mine(self, blocks: int = 1) -> None:
         self.rpc("anvil_mine", [hex(blocks)])

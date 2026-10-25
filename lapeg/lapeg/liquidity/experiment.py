@@ -107,6 +107,7 @@ def run_liquidity(cfg: ExperimentConfig, write_results: bool = True) -> dict[str
     ) as fork:
         assert fork.w3 is not None
         w3 = fork.w3
+        fork.set_block_interval(12)  # deterministic timestamps: fork block + 12 s per mined block
         morpho = MorphoBlue(w3, morpho_addr)
         params = morpho.market_params(cfg.market.market_id)
         price = morpho.oracle_price(oracle)
@@ -129,6 +130,8 @@ def run_liquidity(cfg: ExperimentConfig, write_results: bool = True) -> dict[str
             best, best_route = None, None
             for i, r in enumerate(q.routes):
                 ex = execute_route(fork, r, pt, usdc, amt, slot_pt)
+                if ex.status == "timeout":  # first touch of many venues; retry once on the warmed fork
+                    ex = execute_route(fork, r, pt, usdc, amt, slot_pt)
                 route_rows.append(
                     {
                         "phase": phase,
@@ -153,7 +156,20 @@ def run_liquidity(cfg: ExperimentConfig, write_results: bool = True) -> dict[str
                 if router
                 else None
             )
-            status = "refused" if q.refusal else ("ok" if best else ("reverted" if q.routes else "no_route"))
+            timed_out = (
+                any(x["status"] == "timeout" for x in route_rows[-len(q.routes) :]) if q.routes else False
+            )
+            status = (
+                "refused"
+                if q.refusal
+                else "ok"
+                if best
+                else "timeout"
+                if timed_out
+                else "reverted"
+                if q.routes
+                else "no_route"
+            )
             row: dict[str, Any] = {
                 "phase": phase,
                 "amount_in": amt,
@@ -198,7 +214,12 @@ def run_liquidity(cfg: ExperimentConfig, write_results: bool = True) -> dict[str
             rows.append(measure(phase, q))
 
         def points() -> list[il.DepthPoint]:
-            return [il.DepthPoint(r["amount_in"], r["status"], r["amount_out"], r["gas_used"]) for r in rows]
+            # a timeout says nothing about the market: excluded, neither passing nor failing
+            return [
+                il.DepthPoint(r["amount_in"], r["status"], r["amount_out"], r["gas_used"])
+                for r in rows
+                if r["status"] != "timeout"
+            ]
 
         def thr_gas(pt_: il.DepthPoint) -> float:
             r = next(x for x in rows if x["amount_in"] == pt_.amount_in)
@@ -244,6 +265,7 @@ def run_liquidity(cfg: ExperimentConfig, write_results: bool = True) -> dict[str
     ) as fork:
         assert fork.w3 is not None
         w3 = fork.w3
+        fork.set_block_interval(12)  # deterministic timestamps: fork block + 12 s per mined block
         morpho = MorphoBlue(w3, morpho_addr)
         accounts = list(borrowers.borrower)
         base_answer = price // 10**18  # base feed answer (18 dec) x SCALE_FACTOR (1e18) = price (1e36 scale)

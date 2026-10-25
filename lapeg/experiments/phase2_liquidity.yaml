@@ -13,7 +13,7 @@ fork:
   block: null
   allow_recent_block: true
   recent_block_lag: 0
-  anvil_args: ["--retries", "10", "--fork-retry-backoff", "1000", "--timeout", "60000"]
+  anvil_args: ["--retries", "10", "--fork-retry-backoff", "1000", "--timeout", "60000", "--no-rate-limit"]
 
 logs:                                   # used to rebuild the position book at the same block (Phase 1)
   rpc_url_env: LOGS_RPC_URL

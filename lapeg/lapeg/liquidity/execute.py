@@ -29,11 +29,14 @@ EMPTY_LIMIT: tuple[str, int, list[Any], list[Any], bytes] = (
     b"",
 )  # LimitOrderData: AMM only
 GAS_LIMIT = 15_000_000
+# A fresh fork fetches every touched contract's state from the upstream RPC on first use; a route across
+# many venues can take minutes on a free endpoint. Waiting is cheap; misreading slowness as a revert is not.
+RECEIPT_TIMEOUT_S = 900
 
 
 @dataclass(frozen=True)
 class Execution:
-    status: str  # "ok" or "reverted"
+    status: str  # "ok", "reverted", or "timeout" (fork too slow; says nothing about the market)
     amount_out: int
     gas_used: int
     error: str | None = None
@@ -47,6 +50,11 @@ def revert_reason(fork: AnvilFork, tx: dict[str, Any]) -> str:
     except Exception as e:
         return f"{type(e).__name__}: {str(e)[:200]}"
     return "reverted (no reason on replay)"
+
+
+def _failure(e: Exception) -> str:
+    """'timeout' when the fork was too slow to mine (not a property of the market), else 'reverted'."""
+    return "timeout" if type(e).__name__ == "TimeExhausted" else "reverted"
 
 
 def _scope(fork: AnvilFork, keep: bool) -> AbstractContextManager[None]:
@@ -82,9 +90,10 @@ def execute_route(
         tx = {"from": sender, "to": router, "data": route.tx_data, "gas": GAS_LIMIT}
         with fork.impersonated(sender):
             try:
-                rc = fork.w3.eth.wait_for_transaction_receipt(fork.w3.eth.send_transaction(tx))  # type: ignore[arg-type]
+                h = fork.w3.eth.send_transaction(tx)  # type: ignore[arg-type]
+                rc = fork.w3.eth.wait_for_transaction_receipt(h, timeout=RECEIPT_TIMEOUT_S)
             except Exception as e:  # anvil may reject a reverting tx at submission
-                return Execution("reverted", 0, 0, f"{type(e).__name__}: {str(e)[:200]}")
+                return Execution(_failure(e), 0, 0, f"{type(e).__name__}: {str(e)[:200]}")
             if rc["status"] != 1:
                 return Execution("reverted", 0, int(rc["gasUsed"]), revert_reason(fork, tx))
         return Execution("ok", balance_of(fork, token_out, sender) - before, int(rc["gasUsed"]))
@@ -114,9 +123,11 @@ def sell_pt_for_sy(
         tx = fn.build_transaction({"from": seller, "gas": GAS_LIMIT})
         with fork.impersonated(seller):
             try:
-                rc = fork.w3.eth.wait_for_transaction_receipt(fork.w3.eth.send_transaction(tx))
+                rc = fork.w3.eth.wait_for_transaction_receipt(
+                    fork.w3.eth.send_transaction(tx), timeout=RECEIPT_TIMEOUT_S
+                )
             except Exception as e:
-                return Execution("reverted", 0, 0, f"{type(e).__name__}: {str(e)[:200]}")
+                return Execution(_failure(e), 0, 0, f"{type(e).__name__}: {str(e)[:200]}")
             if rc["status"] != 1:
                 return Execution("reverted", 0, int(rc["gasUsed"]), revert_reason(fork, dict(tx)))
         return Execution("ok", balance_of(fork, sy, seller) - before, int(rc["gasUsed"]))
@@ -156,7 +167,9 @@ def liquidate_position(
         with fork.impersonated(liquidator):
             loan.functions.approve(morpho.address, funding).transact({"from": liquidator})
             try:
-                rc = fork.w3.eth.wait_for_transaction_receipt(fork.w3.eth.send_transaction(tx))
+                rc = fork.w3.eth.wait_for_transaction_receipt(
+                    fork.w3.eth.send_transaction(tx), timeout=RECEIPT_TIMEOUT_S
+                )
             except Exception as e:
                 return LiquidationResult("reverted", 0, 0, 0, f"{type(e).__name__}: {str(e)[:200]}")
             if rc["status"] != 1:

@@ -22,7 +22,10 @@ from lapeg import PROJECT_ROOT
 # and requests occasionally time out.
 PUBLIC_ARCHIVE_RPC = "https://eth.drpc.org"
 # Anvil options that ride out the free tier's timeouts.
-ANVIL_RETRY_ARGS = ["--retries", "10", "--fork-retry-backoff", "1000", "--timeout", "60000"]
+ANVIL_RETRY_ARGS = [
+    "--retries", "10", "--fork-retry-backoff", "1000", "--timeout", "60000",
+    "--no-rate-limit",  # anvil otherwise throttles itself to ~330 compute units per second
+]
 
 
 class ForkConfig(BaseModel):
