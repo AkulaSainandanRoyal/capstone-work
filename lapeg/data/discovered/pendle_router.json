@@ -1,0 +1,17 @@
+{
+ "router": "0x888888888889758F76e7103c6CbF23ABbF58F946",
+ "verified_name": "PendleRouterV4",
+ "n_routes": 2,
+ "aggregators": [
+  "KYBERSWAP",
+  "OKX"
+ ],
+ "retrieved_utc": "2026-10-25T10:10:08.394236+00:00",
+ "query": {
+  "api": "https://api-v2.pendle.finance/core/v3/sdk/1/convert",
+  "token_in": "0xeCfaFdC7741323a945A163ed068B5a3C43483957",
+  "token_out": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+  "amount_in": 1000000000,
+  "field": "routes[].tx.to"
+ }
+}
