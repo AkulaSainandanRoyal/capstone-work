@@ -96,14 +96,17 @@ class CachingHTTPProvider(HTTPProvider):
         super().__init__(endpoint_uri, **kwargs)
         self.cache = cache
         self.namespace = namespace
+        self.last_was_hit = False      # lets callers skip rate-limit pauses after cached responses
 
     def make_request(self, method: Any, params: Any) -> Any:
         cacheable = is_cacheable(str(method), params)
+        self.last_was_hit = False
         if cacheable:
             key = cache_key(self.namespace, str(method), params)
             hit = self.cache.get(key)
             if hit is not None:
                 self.cache.hits += 1
+                self.last_was_hit = True
                 return {"jsonrpc": "2.0", "id": 0, "result": hit}
             self.cache.misses += 1
         resp = super().make_request(method, params)
