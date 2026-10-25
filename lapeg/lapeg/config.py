@@ -22,16 +22,17 @@ from lapeg import PROJECT_ROOT
 # and requests occasionally time out.
 PUBLIC_ARCHIVE_RPC = "https://eth.drpc.org"
 # Anvil options that ride out the free tier's timeouts.
+# Anvil's own request throttle stays on: without it the free endpoint answers HTTP 429 (public rate limit).
 ANVIL_RETRY_ARGS = ["--retries", "10", "--fork-retry-backoff", "1000", "--timeout", "60000"]
 
 
 class ForkConfig(BaseModel):
     rpc_url_env: str = "ARCHIVE_RPC_URL"
-    fallback_rpc_url: str | None = None      # used only when rpc_url_env is unset; may be non-archive
-    block: int | None = None                 # pinned fork block (required for reproducible runs)
-    allow_recent_block: bool = False         # if block is None: fork at head - recent_block_lag
+    fallback_rpc_url: str | None = None  # used only when rpc_url_env is unset; may be non-archive
+    block: int | None = None  # pinned fork block (required for reproducible runs)
+    allow_recent_block: bool = False  # if block is None: fork at head - recent_block_lag
     recent_block_lag: int = Field(default=8, ge=0)
-    port: int | None = None                  # None: pick a free port
+    port: int | None = None  # None: pick a free port
     anvil_args: list[str] = Field(default_factory=list)
     startup_timeout_s: float = 90.0
 
@@ -41,9 +42,9 @@ class LogsConfig(BaseModel):
 
     rpc_url_env: str = "LOGS_RPC_URL"
     fallback_rpc_url: str | None = None
-    chunk: int = Field(default=10_000, ge=1)       # blocks per eth_getLogs; halved on range errors
+    chunk: int = Field(default=10_000, ge=1)  # blocks per eth_getLogs; halved on range errors
     min_chunk: int = Field(default=50, ge=1)
-    pause_s: float = Field(default=0.5, ge=0)      # pause between requests (rate limits)
+    pause_s: float = Field(default=0.5, ge=0)  # pause between requests (rate limits)
 
 
 class MarketRef(BaseModel):

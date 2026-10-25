@@ -1,0 +1,46 @@
+# Phase 2: liquidity and oracle measurement for the LAPEG target market, on a fork of the current block.
+# Run: python scripts/run_experiment.py experiments/phase2_liquidity.yaml
+#
+# Pendle's Convert API quotes are live, so this experiment forks the *current* block (allow_recent_block with
+# lag 0) right after quoting. The block is recorded in the report, and every executed route's calldata is
+# saved (*_routes.parquet), so the run can be re-executed later at that block on an archive node.
+name: phase2_liquidity
+seed: 0
+
+fork:
+  rpc_url_env: ARCHIVE_RPC_URL
+  fallback_rpc_url: https://eth.drpc.org
+  block: null
+  allow_recent_block: true
+  recent_block_lag: 0
+  anvil_args: ["--retries", "10", "--fork-retry-backoff", "1000", "--timeout", "60000"]  # keep anvil's throttle
+
+logs:                                   # used to rebuild the position book at the same block (Phase 1)
+  rpc_url_env: LOGS_RPC_URL
+  fallback_rpc_url: https://rpc.mevblocker.io
+  chunk: 10000
+  min_chunk: 50
+  pause_s: 1.0
+
+morpho_discovery: data/discovered/morpho_blue.json
+market:
+  name: PT-reUSD-10DEC2026
+  market_id: "0x1e9d614631a7df0ec07fb05b2c8cb2491575fd1a63a33bf187a6afb295a4fc64"
+
+cache_path: data/raw/rpc_cache.sqlite
+results_dir: data/results
+
+params:
+  min_usd: 100000            # depth grid: log-spaced sale sizes (USD at oracle value)
+  max_usd: 40000000
+  growth: 1.5
+  bisect_steps: 6            # refine q_max until the bracket is within rel_tol
+  rel_tol: 0.02
+  stress_priority_fee_gwei: 100
+  shocks: [0.005, 0.01, 0.015, 0.02, 0.025, 0.03, 0.05, 0.075, 0.1, 0.15, 0.2]
+  fork_retries: 6            # restart anvil at the same block after transient upstream failures
+  end_to_end: true           # at Delta*: real liquidate + sale of the seized PT on the fork
+  tiny_g_tol: 0.005          # acceptance: |G| at the smallest size (oracle follows a 15-min TWAP)
+  monotone_tol: 0.0001       # acceptance: G non-decreasing in q, up to this tolerance
+  api_match_tol: 0.001       # acceptance: fork-executed output vs API quote, sizes up to q_max
+  hf_rel_tol: 1.0e-9

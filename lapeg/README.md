@@ -8,6 +8,14 @@ illiquid collateral into liquidations the market cannot absorb.
 - **Phase 0 complete:** fork lifecycle, snapshots, impersonation, balances, storage writes, RPC cache.
 - **Phase 1 (lite) complete:** position book for PT-reUSD-10DEC2026 rebuilt from events; health factors match
   Morpho's own computation exactly for all 271 borrowers.
+- **Phase 2 built, measurement running:** sales executed on the fork through Pendle's aggregator routes and the
+  Pendle pool alone; oracle override; gas, flash liquidity and capacity; illiquidity metrics
+  ([`lapeg/metrics/README.md`](lapeg/metrics/README.md)). Failing routes are cross-checked on a real node.
+- **Phase 3 (v0):** design ([`docs/phase3_design.md`](docs/phase3_design.md)), Aug 25 located, liquidator
+  concentration and sizes calibrated.
+- **Phase 4 fast tier and Phase 5 guard v0 built** and unit-tested; design for Phases 4 to 7 in
+  [`docs/design_phases4_7.md`](docs/design_phases4_7.md).
+- **Interactive playground:** `streamlit run lapeg/app/playground.py`.
 - Pre-work from the addendum: archive check, interfaces, oracle sources, Aug 25 event scan.
 
 See [`docs/assumptions.md`](docs/assumptions.md) for findings and open items.
@@ -48,6 +56,10 @@ tests/, test/       pytest and forge tests
 |---|---|
 | Phase 0 acceptance (from config) | `python scripts/run_experiment.py experiments/phase0_fork_smoke.yaml` |
 | Phase 1 position book + acceptance | `python scripts/run_experiment.py experiments/phase1_position_book.yaml` |
+| Phase 2 liquidity and oracle measurement (resumes from its checkpoint) | `python scripts/run_experiment.py experiments/phase2_liquidity.yaml` |
+| Phases 4 and 5 on measured data (needs a Phase 2 run) | `python scripts/run_experiment.py experiments/phase45_cascade_guard.yaml` |
+| Liquidator calibration from Aug 25 events | `python scripts/calibrate_liquidators.py` |
+| Interactive playground (`pip install -e ".[app]"` first) | `streamlit run lapeg/app/playground.py` |
 | Fast tests only (no network) | `pytest -m "not fork"` |
 | Python tests (includes fork tests) | `pytest` (skip fork tests: `pytest -m "not fork"`) |
 | Solidity fork test | `forge test` |

@@ -18,6 +18,7 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = ["pytest>=8", "ruff>=0.6", "mypy>=1.10", "types-PyYAML", "types-requests"]
+app = ["streamlit>=1.40", "plotly>=5.24"]
 
 [tool.setuptools.packages.find]
 include = ["lapeg*"]
@@ -40,6 +41,10 @@ extend-exclude = ["lib", "out", "cache"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP"]
+
+[tool.ruff.lint.per-file-ignores]
+# measure() and friends are redefined on each fork attempt and only called within that attempt
+"lapeg/liquidity/experiment.py" = ["B023"]
 
 [tool.mypy]
 python_version = "3.11"
