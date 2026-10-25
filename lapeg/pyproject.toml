@@ -42,6 +42,10 @@ extend-exclude = ["lib", "out", "cache"]
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP"]
 
+[tool.ruff.lint.per-file-ignores]
+# measure() and friends are redefined on each fork attempt and only called within that attempt
+"lapeg/liquidity/experiment.py" = ["B023"]
+
 [tool.mypy]
 python_version = "3.11"
 ignore_missing_imports = true

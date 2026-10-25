@@ -21,9 +21,11 @@ import math
 import time
 from dataclasses import asdict
 from datetime import UTC, datetime
+from pathlib import Path
 from typing import Any
 
 import pandas as pd
+import requests
 from web3 import Web3
 
 from lapeg import PROJECT_ROOT
@@ -31,11 +33,12 @@ from lapeg.chain.abi import load_abi
 from lapeg.chain.health_reader import read_health
 from lapeg.chain.morpho import MorphoBlue, load_morpho_address
 from lapeg.config import ExperimentConfig, resolve_rpc_url
-from lapeg.fork.anvil import AnvilFork
-from lapeg.fork.state import find_balance_slot, set_erc20_balance
+from lapeg.fork.anvil import AnvilError, AnvilFork
+from lapeg.fork.state import find_allowance_index, find_balance_slot, set_erc20_balance
 from lapeg.liquidity.capacity import flash_liquidity, gas_cost_usd, gas_price
-from lapeg.liquidity.execute import execute_route, sell_pt_for_sy
-from lapeg.liquidity.pendle_api import Quote, quote
+from lapeg.liquidity.execute import Execution, execute_route, sell_pt_for_sy
+from lapeg.liquidity.pendle_api import Quote, Route, quote
+from lapeg.liquidity.realnode import TokenSlots, call_route
 from lapeg.market import morpho_math as mm
 from lapeg.market.experiment import run_position_book
 from lapeg.metrics import illiquidity as il
@@ -70,6 +73,20 @@ def _head_block(url: str, attempts: int = 6) -> int:
     raise AssertionError("unreachable")
 
 
+def _checkpoint_path(cfg: ExperimentConfig) -> Path:
+    return cfg.path(Path("data/raw")) / f"checkpoint_{cfg.name}_{cfg.market.name}.json"
+
+
+def _quote_to_json(phase: str, q: Quote) -> dict[str, Any]:
+    return {"phase": phase, "quote": {**asdict(q), "routes": [asdict(r) for r in q.routes]}}
+
+
+def _quote_from_json(d: dict[str, Any]) -> tuple[str, Quote]:
+    q = dict(d["quote"])
+    q["routes"] = [Route(**r) for r in q["routes"]]
+    return d["phase"], Quote(**q)
+
+
 def run_liquidity(cfg: ExperimentConfig, write_results: bool = True) -> dict[str, Any]:
     t0 = time.monotonic()
     p = cfg.params
@@ -92,162 +109,237 @@ def run_liquidity(cfg: ExperimentConfig, write_results: bool = True) -> dict[str
     def pt_for_usd(usd: float, price: int) -> int:
         return int(usd * 10**loan_dec * il.ORACLE_PRICE_SCALE // price)
 
-    sizes = _grid(float(p.get("min_usd", 1e5)), float(p.get("max_usd", 4e7)), float(p.get("growth", 1.5)))
-    print(f"quoting {len(sizes)} sizes")
-    quotes: list[tuple[str, Quote]] = [
-        ("grid", quote(pt, usdc, pt_for_usd(s, price_now), seller)) for s in sizes
-    ]
-    block = _head_block(url)  # fresh connection: the one above sat idle while quoting
-    print(f"forking block {block}")
+    ckpt = _checkpoint_path(cfg)
+    if p.get("resume", True) and ckpt.exists():
+        saved = json.loads(ckpt.read_text())
+        block, rows, route_rows = saved["block"], saved["rows"], saved["route_rows"]
+        quotes = [_quote_from_json(d) for d in saved["quotes"]]
+        print(f"resuming at block {block}: {len(rows)} of {len(quotes)} sizes done ({ckpt.name})")
+    else:
+        sizes = _grid(float(p.get("min_usd", 1e5)), float(p.get("max_usd", 4e7)), float(p.get("growth", 1.5)))
+        print(f"quoting {len(sizes)} sizes")
+        quotes = [("grid", quote(pt, usdc, pt_for_usd(s, price_now), seller)) for s in sizes]
+        block = _head_block(url)  # fresh connection: the one above sat idle while quoting
+        rows, route_rows = [], []
+        print(f"forking block {block}")
 
-    rows: list[dict[str, Any]] = []
-    route_rows: list[dict[str, Any]] = []
-    with AnvilFork(
-        url, block, extra_args=cfg.fork.anvil_args, startup_timeout_s=cfg.fork.startup_timeout_s
-    ) as fork:
-        assert fork.w3 is not None
-        w3 = fork.w3
-        fork.set_block_interval(12)  # deterministic timestamps: fork block + 12 s per mined block
-        morpho = MorphoBlue(w3, morpho_addr)
-        params = morpho.market_params(cfg.market.market_id)
-        price = morpho.oracle_price(oracle)
-        lif = mm.liquidation_incentive_factor(params.lltv)
-        thr = il.bonus_threshold(lif)
-        gp = gas_price(w3, block)
-        stress_fee = int(float(p.get("stress_priority_fee_gwei", 100)) * 1e9)
-        slot_pt = find_balance_slot(fork, pt)
-        pmarket = w3.eth.contract(
-            address=Web3.to_checksum_address(setup["pendle_market"]), abi=load_abi("PendleMarket")
+    def save_checkpoint() -> None:
+        ckpt.parent.mkdir(parents=True, exist_ok=True)
+        ckpt.write_text(
+            json.dumps(
+                {
+                    "block": block,
+                    "rows": rows,
+                    "route_rows": route_rows,
+                    "quotes": [_quote_to_json(ph, q) for ph, q in quotes],
+                },
+                default=str,
+            )
         )
-        sy, mpt, _ = pmarket.functions.readTokens().call()
-        if mpt.lower() != pt.lower():
-            raise RuntimeError("Pendle market does not trade this PT")
-        sy_rate = int(w3.eth.contract(address=sy, abi=load_abi("PendleSY")).functions.exchangeRate().call())
-        router = quotes[0][1].routes[0].tx_to if quotes[0][1].routes else None
 
-        def measure(phase: str, q: Quote) -> dict[str, Any]:
-            amt = q.amount_in
-            best, best_route = None, None
-            for i, r in enumerate(q.routes):
-                ex = execute_route(fork, r, pt, usdc, amt, slot_pt)
-                if ex.status == "timeout":  # first touch of many venues; retry once on the warmed fork
-                    ex = execute_route(fork, r, pt, usdc, amt, slot_pt)
-                route_rows.append(
-                    {
+    save_checkpoint()
+    real = Web3(Web3.HTTPProvider(url, request_kwargs={"timeout": 120}))  # real-node cross-check
+    retries = int(p.get("fork_retries", 3))
+    for attempt in range(retries):
+        try:
+            with AnvilFork(
+                url, block, extra_args=cfg.fork.anvil_args, startup_timeout_s=cfg.fork.startup_timeout_s
+            ) as fork:
+                assert fork.w3 is not None
+                w3 = fork.w3
+                fork.set_block_interval(12)  # deterministic timestamps: fork block + 12 s per mined block
+                morpho = MorphoBlue(w3, morpho_addr)
+                params = morpho.market_params(cfg.market.market_id)
+                price = morpho.oracle_price(oracle)
+                lif = mm.liquidation_incentive_factor(params.lltv)
+                thr = il.bonus_threshold(lif)
+                gp = gas_price(w3, block)
+                stress_fee = int(float(p.get("stress_priority_fee_gwei", 100)) * 1e9)
+                slot_pt = find_balance_slot(fork, pt)
+                allow_index, allow_layout = find_allowance_index(fork, pt)
+                token_slots = TokenSlots(pt, slot_pt.index, slot_pt.layout, allow_index, allow_layout)
+                pmarket = w3.eth.contract(
+                    address=Web3.to_checksum_address(setup["pendle_market"]), abi=load_abi("PendleMarket")
+                )
+                sy, mpt, _ = pmarket.functions.readTokens().call()
+                if mpt.lower() != pt.lower():
+                    raise RuntimeError("Pendle market does not trade this PT")
+                sy_rate = int(
+                    w3.eth.contract(address=sy, abi=load_abi("PendleSY")).functions.exchangeRate().call()
+                )
+                router = quotes[0][1].routes[0].tx_to if quotes[0][1].routes else None
+
+                def measure(phase: str, q: Quote) -> dict[str, Any]:
+                    amt = q.amount_in
+                    best: Execution | None = None
+                    best_route: Route | None = None
+                    measured_on = None
+                    for i, r in enumerate(q.routes):
+                        ex = execute_route(fork, r, pt, usdc, amt, slot_pt)
+                        if (
+                            ex.status == "timeout"
+                        ):  # first touch of many venues; retry once on the warmed fork
+                            ex = execute_route(fork, r, pt, usdc, amt, slot_pt)
+                        rn = None
+                        if (
+                            ex.status != "ok"
+                        ):  # same tx on the real node at the same block: real revert or fork artifact?
+                            rn = call_route(real, block, token_slots, r.tx_from, r.tx_to, r.tx_data, amt)
+                        route_rows.append(
+                            {
+                                "phase": phase,
+                                "amount_in": str(amt),
+                                "route": i,
+                                "aggregator": r.aggregator,
+                                "status": ex.status,
+                                "amount_out": str(ex.amount_out),
+                                "quoted_out": str(r.quoted_out),
+                                "gas_used": ex.gas_used,
+                                "error": ex.error,
+                                "tx_to": r.tx_to,
+                                "tx_from": r.tx_from,
+                                "tx_data": r.tx_data,
+                                "quoted_utc": q.quoted_utc,
+                                "real_node_status": rn.status if rn else None,
+                                "real_node_out": str(rn.amount_out) if rn else None,
+                                "real_node_error": rn.error if rn else None,
+                            }
+                        )
+                        if ex.status == "ok" and (best is None or ex.amount_out > best.amount_out):
+                            best, best_route, measured_on = ex, r, "fork"
+                        elif rn and rn.status == "ok" and (best is None or rn.amount_out > best.amount_out):
+                            gas = int(r.api_gas or 0)
+                            best, best_route, measured_on = (
+                                Execution("ok", rn.amount_out, gas),
+                                r,
+                                "real_node_call",
+                            )
+                    leg = (
+                        sell_pt_for_sy(fork, router, setup["pendle_market"], pt, sy, amt, seller, slot_pt)
+                        if router
+                        else None
+                    )
+                    timed_out = (
+                        any(x["status"] == "timeout" for x in route_rows[-len(q.routes) :])
+                        if q.routes
+                        else False
+                    )
+                    status = (
+                        "refused"
+                        if q.refusal
+                        else "ok"
+                        if best
+                        else "timeout"
+                        if timed_out
+                        else "reverted"
+                        if q.routes
+                        else "no_route"
+                    )
+                    row: dict[str, Any] = {
                         "phase": phase,
-                        "amount_in": str(amt),
-                        "route": i,
-                        "aggregator": r.aggregator,
-                        "status": ex.status,
-                        "amount_out": str(ex.amount_out),
-                        "quoted_out": str(r.quoted_out),
-                        "gas_used": ex.gas_used,
-                        "error": ex.error,
-                        "tx_to": r.tx_to,
-                        "tx_from": r.tx_from,
-                        "tx_data": r.tx_data,
-                        "quoted_utc": q.quoted_utc,
+                        "amount_in": amt,
+                        "size_usd_at_oracle": amt * price / il.ORACLE_PRICE_SCALE / 10**loan_dec,
+                        "status": status,
+                        "refusal": q.refusal,
+                        "n_routes": len(q.routes),
+                        "amount_out": best.amount_out if best else 0,
+                        "measured_on": measured_on,
+                        "n_routes_reverting_on_real_node": sum(
+                            1 for x in route_rows[-len(q.routes) :] if x["real_node_status"] == "reverted"
+                        )
+                        if q.routes
+                        else 0,
+                        "gas_used": best.gas_used if best else 0,
+                        "aggregator": best_route.aggregator if best_route else None,
+                        "api_quoted_out": best_route.quoted_out if best_route else None,
+                        "api_internal_impact": best_route.internal_impact if best_route else None,
+                        "api_external_impact": best_route.external_impact if best_route else None,
+                        "pendle_leg_status": leg.status if leg else None,
+                        "pendle_leg_error": leg.error if leg else None,
+                        "pendle_leg_sy_out": leg.amount_out if leg else None,
                     }
-                )
-                if ex.status == "ok" and (best is None or ex.amount_out > best.amount_out):
-                    best, best_route = ex, r
-            leg = (
-                sell_pt_for_sy(fork, router, setup["pendle_market"], pt, sy, amt, seller, slot_pt)
-                if router
-                else None
+                    if best:
+                        value = amt * price / il.ORACLE_PRICE_SCALE
+                        g_usd, s_usd = (
+                            gas_cost_usd(best.gas_used, gp),
+                            gas_cost_usd(best.gas_used, gp, stress_fee),
+                        )
+                        row.update(
+                            g=il.oracle_gap(best.amount_out, amt, price),
+                            api_match=best.amount_out / best_route.quoted_out - 1 if best_route else None,
+                            gas_usd=g_usd,
+                            gas_usd_stress=s_usd,
+                            threshold_gas=il.gas_adjusted_threshold(lif, value, g_usd * 10**loan_dec),
+                            threshold_stress=il.gas_adjusted_threshold(lif, value, s_usd * 10**loan_dec),
+                        )
+                    if leg and leg.status == "ok":
+                        row["g_pendle_leg"] = 1 - (
+                            leg.amount_out * sy_rate / 1e18
+                        ) * il.ORACLE_PRICE_SCALE / (amt * price)
+                    g_txt = (
+                        f"G={100 * row['g']:.3f}%"
+                        if "g" in row
+                        else status + (f" ({q.refusal[:50]})" if q.refusal else "")
+                    )
+                    print(f"  {phase:7s} {row['size_usd_at_oracle'] / 1e6:8.3f}M  {g_txt}")
+                    return row
+
+                done = {r["amount_in"] for r in rows}
+                for phase, q in quotes:
+                    if q.amount_in not in done:
+                        rows.append(measure(phase, q))
+                        save_checkpoint()
+
+                def points() -> list[il.DepthPoint]:
+                    # a timeout says nothing about the market: excluded, neither passing nor failing
+                    return [
+                        il.DepthPoint(r["amount_in"], r["status"], r["amount_out"], r["gas_used"])
+                        for r in rows
+                        if r["status"] != "timeout"
+                    ]
+
+                def thr_gas(pt_: il.DepthPoint) -> float:
+                    r = next(x for x in rows if x["amount_in"] == pt_.amount_in)
+                    return r.get("threshold_gas", thr)
+
+                # 3. bisection towards q_max (gas-adjusted)
+                for _ in range(int(p.get("bisect_steps", 6))):
+                    lo, hi = il.q_max_bracket(points(), price, thr_gas)
+                    if (
+                        lo is None
+                        or hi is None
+                        or (hi.amount_in - lo.amount_in) / lo.amount_in <= float(p.get("rel_tol", 0.02))
+                    ):
+                        break
+                    qb = quote(pt, usdc, (lo.amount_in + hi.amount_in) // 2, seller)
+                    quotes.append(("bisect", qb))
+                    rows.append(measure("bisect", qb))
+                    save_checkpoint()
+
+                pts = points()
+                brackets = {
+                    "bonus": il.q_max_bracket(pts, price, lambda _: thr),
+                    "bonus_gas": il.q_max_bracket(pts, price, thr_gas),
+                    "bonus_stress_gas": il.q_max_bracket(
+                        pts,
+                        price,
+                        lambda x: next(r for r in rows if r["amount_in"] == x.amount_in).get(
+                            "threshold_stress", thr
+                        ),
+                    ),
+                }
+                flash = flash_liquidity(w3, morpho_addr, usdc)
+                sy_dec = int(w3.eth.contract(address=sy, abi=load_abi("ERC20")).functions.decimals().call())
+            break
+        except (AnvilError, requests.exceptions.ConnectionError, TimeoutError) as e:
+            # the free endpoint dropped a connection: restart anvil at the same block; finished sizes are
+            # kept in the checkpoint and skipped
+            print(
+                f"  fork failed ({type(e).__name__}); restarting at block {block} ({attempt + 1}/{retries})"
             )
-            timed_out = (
-                any(x["status"] == "timeout" for x in route_rows[-len(q.routes) :]) if q.routes else False
-            )
-            status = (
-                "refused"
-                if q.refusal
-                else "ok"
-                if best
-                else "timeout"
-                if timed_out
-                else "reverted"
-                if q.routes
-                else "no_route"
-            )
-            row: dict[str, Any] = {
-                "phase": phase,
-                "amount_in": amt,
-                "size_usd_at_oracle": amt * price / il.ORACLE_PRICE_SCALE / 10**loan_dec,
-                "status": status,
-                "refusal": q.refusal,
-                "n_routes": len(q.routes),
-                "amount_out": best.amount_out if best else 0,
-                "gas_used": best.gas_used if best else 0,
-                "aggregator": best_route.aggregator if best_route else None,
-                "api_quoted_out": best_route.quoted_out if best_route else None,
-                "api_internal_impact": best_route.internal_impact if best_route else None,
-                "api_external_impact": best_route.external_impact if best_route else None,
-                "pendle_leg_status": leg.status if leg else None,
-                "pendle_leg_error": leg.error if leg else None,
-                "pendle_leg_sy_out": leg.amount_out if leg else None,
-            }
-            if best:
-                value = amt * price / il.ORACLE_PRICE_SCALE
-                g_usd, s_usd = gas_cost_usd(best.gas_used, gp), gas_cost_usd(best.gas_used, gp, stress_fee)
-                row.update(
-                    g=il.oracle_gap(best.amount_out, amt, price),
-                    api_match=best.amount_out / best_route.quoted_out - 1 if best_route else None,
-                    gas_usd=g_usd,
-                    gas_usd_stress=s_usd,
-                    threshold_gas=il.gas_adjusted_threshold(lif, value, g_usd * 10**loan_dec),
-                    threshold_stress=il.gas_adjusted_threshold(lif, value, s_usd * 10**loan_dec),
-                )
-            if leg and leg.status == "ok":
-                row["g_pendle_leg"] = 1 - (leg.amount_out * sy_rate / 1e18) * il.ORACLE_PRICE_SCALE / (
-                    amt * price
-                )
-            g_txt = (
-                f"G={100 * row['g']:.3f}%"
-                if "g" in row
-                else status + (f" ({q.refusal[:50]})" if q.refusal else "")
-            )
-            print(f"  {phase:7s} {row['size_usd_at_oracle'] / 1e6:8.3f}M  {g_txt}")
-            return row
-
-        for phase, q in quotes:
-            rows.append(measure(phase, q))
-
-        def points() -> list[il.DepthPoint]:
-            # a timeout says nothing about the market: excluded, neither passing nor failing
-            return [
-                il.DepthPoint(r["amount_in"], r["status"], r["amount_out"], r["gas_used"])
-                for r in rows
-                if r["status"] != "timeout"
-            ]
-
-        def thr_gas(pt_: il.DepthPoint) -> float:
-            r = next(x for x in rows if x["amount_in"] == pt_.amount_in)
-            return r.get("threshold_gas", thr)
-
-        # 3. bisection towards q_max (gas-adjusted)
-        for _ in range(int(p.get("bisect_steps", 6))):
-            lo, hi = il.q_max_bracket(points(), price, thr_gas)
-            if (
-                lo is None
-                or hi is None
-                or (hi.amount_in - lo.amount_in) / lo.amount_in <= float(p.get("rel_tol", 0.02))
-            ):
-                break
-            rows.append(measure("bisect", quote(pt, usdc, (lo.amount_in + hi.amount_in) // 2, seller)))
-
-        pts = points()
-        brackets = {
-            "bonus": il.q_max_bracket(pts, price, lambda _: thr),
-            "bonus_gas": il.q_max_bracket(pts, price, thr_gas),
-            "bonus_stress_gas": il.q_max_bracket(
-                pts,
-                price,
-                lambda x: next(r for r in rows if r["amount_in"] == x.amount_in).get("threshold_stress", thr),
-            ),
-        }
-        flash = flash_liquidity(w3, morpho_addr, usdc)
-        sy_dec = int(w3.eth.contract(address=sy, abi=load_abi("ERC20")).functions.decimals().call())
+            if attempt == retries - 1:
+                raise
+            time.sleep(10)
 
     # 5. position book at the same block
     book_cfg = cfg.model_copy(
