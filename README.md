@@ -6,7 +6,7 @@ Next milestone: **Review 2 (Nov 2 or 3, 2026)**: further implementation, an exte
 | Track | Question | Code | Status |
 |---|---|---|---|
 | **Measurement** | How much collateral can one liquidation sell profitably ($q_{max}$), and what price shock puts more than that up for sale ($\Delta^*$)? | [`pendle_ladder_all.py`](pendle_ladder_all.py), [`layer2_borrowers.py`](layer2_borrowers.py) | Done for 3 markets (Oct 18 and 19); daily snapshots running |
-| **Mitigation: LAPEG** | Can a guard that simulates pending transactions on a mainnet fork, where a block builder sits, stop transactions that trigger liquidations the market cannot absorb? | [`lapeg/`](lapeg/) | Phase 0 done; Phase 1 in progress; target for Review 2 is a thin slice (LAPEG v0) on one market |
+| **Mitigation: LAPEG** | Can a guard that simulates pending transactions on a mainnet fork, where a block builder sits, stop transactions that trigger liquidations the market cannot absorb? | [`lapeg/`](lapeg/) | Phases 0 and 1 (lite) done; target for Review 2 is a thin slice (LAPEG v0) on one market |
 
 **Contents**
 1. [Overview](#1-overview)
@@ -296,7 +296,7 @@ Script: [`layer2_borrowers.py`](layer2_borrowers.py). Read-only Morpho GraphQL a
 4. **Link to Layer 1:** $S_o(Q(\Delta))$ is interpolated from the newest ladder over `pt_sold`. Sizes at or above the first refusal fail; sizes beyond the ladder are re-quoted live.
 5. **Break point:** $\Delta^* = \min\{\Delta_i : S_o(Q(\Delta_i)) \ge 0.3(1-LLTV) \text{ or refused}\}$.
 
-LAPEG Phase 1 replaces step 1 with a position book rebuilt from on-chain events (section 8.2).
+LAPEG Phase 1 replaces step 1 with a position book rebuilt from on-chain events, with health factors that match Morpho's own code exactly (section 8.2).
 
 ### 6.2 Results (positions 2026-10-19 14:56 UTC, ladder 2026-10-19 14:00 UTC)
 
@@ -417,7 +417,7 @@ The full spec has eight phases. For Review 2 the target is a thin vertical slice
 | Phase | What it builds | v0 scope | Status |
 |---|---|---|---|
 | 0 | Fork lifecycle, snapshots, impersonation, balances, storage writes, RPC cache | Full | **Done** (34 pytest + 1 forge test; acceptance passes at pinned block 26267600) |
-| 1 | Market model: position book from events, health factors matched to Morpho's own views | Lite: one market | **In progress** |
+| 1 | Market model: position book from events, health factors matched to Morpho's own views | Lite: one market | **Done** (271 borrowers at block 26267600; health factors match Morpho exactly; Morpho's own `liquidate` agrees for all) |
 | 2 | Depth curve on the fork, $G(q)$, oracle override, $q_{max}$, liquidator capacity, illiquidity metric | Full for one market | Planned; fork $P_{exec}$ must match the API quote at the current block |
 | 3 | Agents, calibration, Aug 25 replay (the validation gate), $C^*$ search | Design; event discovery started | Aug 25 event located (section 8.3) |
 | 4 | Cascade predictor: exact tier and fast tier | Fast tier only | Planned (extends Layer 2 with the feedback loop) |
@@ -469,7 +469,7 @@ All records are in [`lapeg/data/discovered/`](lapeg/data/discovered/), each with
 - [x] Daily measurement snapshots until maturity (from 2026-10-20)
 - [x] LAPEG groundwork: archive access, interfaces, oracle sources, Aug 25 event scan
 - [x] LAPEG Phase 0: fork control and RPC cache, acceptance passing
-- [ ] LAPEG Phase 1 (lite): position book for PT-reUSD with health factors matched to Morpho within $10^{-9}$
+- [x] LAPEG Phase 1 (lite): position book for PT-reUSD with health factors matched to Morpho within $10^{-9}$ (achieved: exact)
 - [ ] LAPEG Phase 2: depth curve and $G(q)$ on the fork, oracle override, $q_{max}$, API cross-check
 - [ ] LAPEG Phase 4 fast tier: cascade with feedback on the depth curve
 - [ ] LAPEG guard v0: PASS or DROP on one synthetic transaction, with a counterfactual log

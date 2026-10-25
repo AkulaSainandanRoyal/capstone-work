@@ -79,7 +79,54 @@ Record: `data/discovered/aug25_event.json` (query, per-market summary and every 
 - The other two events named in the spec (Oct 2025 USDe depeg window, Mar 2026 Aave CAPO misconfiguration) have
   not been searched for yet.
 
-## 4. Phase 0 implementation choices
+## 4. Phase 1 (lite) implementation choices
+
+- **Scope.** One market (PT-reUSD-10DEC2026/USDC) at one pinned block, as the addendum's v0 scope allows.
+  Deferred from the full Phase 1: the Aave v3 and Euler v2 adapter stubs, and the collateral registry
+  (the oracle and venue facts it would hold are already in `data/discovered/oracles.json`).
+- **Positions from events.** `SupplyCollateral`, `WithdrawCollateral`, `Borrow`, `Repay` and `Liquidate`,
+  filtered by the market id (topic1), replayed in (block, log index) order. Accounting follows `Morpho.sol`
+  v1.0.0, including bad debt: a liquidation removes `repaidShares + badDebtShares`. A negative balance
+  stops the run (it would mean a missed event).
+- **Creation block.** The Morpho API's `creationBlockNumber` is used as a hint and confirmed by the
+  `CreateMarket` log for this market id at that block (block 25325379).
+- **Logs endpoint.** `rpc.mevblocker.io` (free, no key) serves 10,000-block `eth_getLogs` ranges, so the
+  market's ~942k blocks of history take about 95 requests instead of ~9,400 on drpc. Requests are paced,
+  retried on transient errors, and the window halves on range errors. All responses are cached in
+  `data/raw/rpc_cache.sqlite`, so reruns make no log requests. Override with `LOGS_RPC_URL`.
+- **Health factor definition.** Morpho has no health-factor view; it checks `maxBorrow >= borrowed` in
+  `_isHealthy`. LAPEG defines `HF = maxBorrow / borrowed` with Morpho's rounding (debt rounded up, `maxBorrow`
+  rounded down), so `HF >= 1` exactly when Morpho considers the position healthy. It equals `LLTV / LTV` up to
+  rounding, which is how the Morpho API and Layer 2 report it.
+- **Accrued interest.** Debt includes interest up to the timestamp the fork executes calls at, computed by
+  Morpho's own `MorphoBalancesLib.expectedMarketBalances` (which calls the IRM's `borrowRateView`). This is what
+  `liquidate` would see after `_accrueInterest`.
+- **Protocol side of the cross-check.** `contracts/HealthReader.sol` mirrors `Morpho._isHealthy` using Morpho's
+  vendored libraries. It is never deployed: its runtime code is injected with an `eth_call` state override on
+  the fork. **Independent side:** `lapeg/market/morpho_math.py`, a transcription of `MathLib` and `SharesMathLib`
+  applied to the event-replayed positions.
+- **Extra check against Morpho's real code path.** For every borrower, `liquidate(params, borrower, 1, 0, "")` is
+  `eth_call`ed on the fork. Morpho must revert with "position is healthy" exactly when the computed `HF >= 1`.
+
+**Result (block 26267600, `data/results/phase1_position_book_2026-10-25T062504Z.json`).** All checks pass:
+
+| Check | Result |
+|---|---|
+| Events replayed (market creation to block N) | 9,879: 3,379 SupplyCollateral, 1,514 WithdrawCollateral, 3,395 Borrow, 1,575 Repay, 16 Liquidate |
+| Positions vs Morpho storage | 284 accounts, all exact |
+| Sum of borrow shares vs market total | Exact |
+| Health factors, own math vs Morpho's libraries | 271 borrowers, max relative error **0** (integer-exact) |
+| Morpho's own `liquidate` agrees with `HF >= 1` | All 271 |
+| Helper read at block N's timestamp | Yes (interest accrued to block N) |
+
+- No position is liquidatable at block N. The lowest health factor is exactly 1.0, from a dust position (5 raw units of
+  collateral, 3 raw units of debt) sitting precisely on Morpho's boundary, which Morpho treats as healthy. The lowest
+  non-dust health factor is 1.0037.
+- All 16 liquidations in this market's history are the 16 of Aug 25, 2026.
+- Runtime: about 6 minutes for the first run (95 log requests), about 2 minutes afterwards (logs cached; most of the
+  time is anvil fetching state for the 271 `liquidate` checks).
+
+## 5. Phase 0 implementation choices
 
 - **Forking.** One anvil process per fork, started as a subprocess on a free local port. Anvil caches forked
   state under `~/.foundry/cache`. `evm_revert` consumes the snapshot it reverts to (checked by test).

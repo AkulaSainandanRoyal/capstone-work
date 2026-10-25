@@ -4,9 +4,13 @@ Research prototype for the capstone "Measurement and Mitigation of Illiquidity i
 DeFi". It simulates pending transactions on a mainnet fork and predicts whether they push positions backed by
 illiquid collateral into liquidations the market cannot absorb.
 
-**Status: Phase 0 complete** (fork lifecycle, snapshots, impersonation, balances, storage writes, RPC cache),
-plus the addendum's pre-work: archive check, interfaces, oracle sources, Aug 25 event scan. See
-[`docs/assumptions.md`](docs/assumptions.md) for findings and open items.
+**Status:**
+- **Phase 0 complete:** fork lifecycle, snapshots, impersonation, balances, storage writes, RPC cache.
+- **Phase 1 (lite) complete:** position book for PT-reUSD-10DEC2026 rebuilt from events; health factors match
+  Morpho's own computation exactly for all 271 borrowers.
+- Pre-work from the addendum: archive check, interfaces, oracle sources, Aug 25 event scan.
+
+See [`docs/assumptions.md`](docs/assumptions.md) for findings and open items.
 
 ## Setup
 
@@ -43,6 +47,8 @@ tests/, test/       pytest and forge tests
 | Task | Command |
 |---|---|
 | Phase 0 acceptance (from config) | `python scripts/run_experiment.py experiments/phase0_fork_smoke.yaml` |
+| Phase 1 position book + acceptance | `python scripts/run_experiment.py experiments/phase1_position_book.yaml` |
+| Fast tests only (no network) | `pytest -m "not fork"` |
 | Python tests (includes fork tests) | `pytest` (skip fork tests: `pytest -m "not fork"`) |
 | Solidity fork test | `forge test` |
 | Lint and types | `ruff check . && mypy lapeg scripts tests` |
@@ -68,6 +74,21 @@ with AnvilFork(rpc_url, block) as fork:
 
 `lapeg.fork.state.set_erc20_balance(fork, token, holder, amount)` finds the token's balance slot by probing.
 `swap(token_in, token_out, amount)` from the agreed fork interface is Phase 2 work.
+
+## Position book (Phase 1)
+
+`data/results/position_book_<market>_<block>.parquet`, one row per account with collateral or debt. The first six
+columns are the interface agreed for the cascade code:
+
+| Column | Meaning |
+|---|---|
+| `market_id`, `block`, `borrower` | Market, fork block, account |
+| `collateral` | Collateral in token units (PT) |
+| `debt` | Debt in loan-token units, interest accrued to the fork's call timestamp |
+| `health_factor` | `maxBorrow / borrowed` with Morpho's rounding; `< 1` means liquidatable |
+
+Extra columns: `health_factor_morpho` (from Morpho's own code via `HealthReader`), `ltv`, and exact raw integers
+(`collateral_raw`, `borrow_shares_raw`, `debt_raw`, `max_borrow_raw`).
 
 ## Ground rules
 

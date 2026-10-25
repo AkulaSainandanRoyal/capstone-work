@@ -51,6 +51,32 @@ event AccrueInterest(Id indexed id, uint256 prevBorrowRate, uint256 interest, ui
 `Liquidate` topic0 = `keccak256("Liquidate(bytes32,address,address,uint256,uint256,uint256,uint256,uint256)")`
 = `0xa4946ede45d0c6f06a0f5ce92c9ad3b4751452d2fe0e25010783bcab57a67e41` (checked with `cast keccak`).
 
+Health and liquidation math (`Morpho.sol`, `SharesMathLib.sol`, `MathLib.sol`, `ConstantsLib.sol`):
+
+```solidity
+uint256 constant VIRTUAL_SHARES = 1e6;  uint256 constant VIRTUAL_ASSETS = 1;  uint256 constant ORACLE_PRICE_SCALE = 1e36;
+toAssetsUp(shares, totalAssets, totalShares) = shares.mulDivUp(totalAssets + VIRTUAL_ASSETS, totalShares + VIRTUAL_SHARES)
+// _isHealthy, run inside liquidate() after _accrueInterest:
+borrowed  = borrowShares.toAssetsUp(totalBorrowAssets, totalBorrowShares);
+maxBorrow = collateral.mulDivDown(price, ORACLE_PRICE_SCALE).wMulDown(lltv);
+healthy  <=> maxBorrow >= borrowed      // otherwise liquidate() proceeds; if healthy it reverts "position is healthy"
+```
+
+Periphery views used by `contracts/HealthReader.sol` (libraries, compiled in, not deployed contracts):
+`MorphoLib.borrowShares(id, user)`, `MorphoLib.collateral(id, user)`, `MorphoLib.totalBorrowAssets(id)`,
+`MorphoLib.totalBorrowShares(id)` (all read storage through `extSloads`), and
+`MorphoBalancesLib.expectedMarketBalances(marketParams)` (totals with interest accrued to `block.timestamp`).
+
+## LAPEG helper: HealthReader
+
+`contracts/HealthReader.sol`, injected with an `eth_call` state override (`lapeg/chain/health_reader.py`).
+
+```solidity
+function read(IMorpho morpho, Id id, address[] calldata users, bool accrue) external view returns (Snapshot memory);
+// Snapshot: blockNumber, timestamp, price, lltv, totalBorrowAssets, totalBorrowShares,
+//           Account[] {collateral, borrowShares, borrowed, maxBorrow}
+```
+
 ## Morpho oracle interface
 
 Source: `src/interfaces/IOracle.sol`, same commit.
