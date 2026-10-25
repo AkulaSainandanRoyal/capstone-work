@@ -15,11 +15,12 @@ Requires Python 3.11+ and Foundry (`anvil`, `forge`, `cast`).
 ```bash
 pip install -e ".[dev]"
 forge install foundry-rs/forge-std@v1.10.0 --no-git   # lib/ is not committed
-export ARCHIVE_RPC_URL=...                             # archive RPC; see .env.example
+export ARCHIVE_RPC_URL=...                             # optional: a keyed archive RPC; see .env.example
 ```
 
-Without `ARCHIVE_RPC_URL`, tests and the smoke experiment fall back to a public non-archive RPC and fork a recent
-block. That works for development, but such runs cannot be replayed.
+Without `ARCHIVE_RPC_URL`, everything uses the free public archive endpoint `eth.drpc.org` (no key; about 100
+blocks per `eth_getLogs` request, occasional timeouts that anvil retries). Experiments pin their fork block, so
+runs are reproducible on either.
 
 ## Layout
 

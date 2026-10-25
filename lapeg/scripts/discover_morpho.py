@@ -20,6 +20,7 @@ from web3 import Web3
 
 from lapeg import PROJECT_ROOT
 from lapeg.chain.morpho import MorphoBlue
+from lapeg.config import PUBLIC_ARCHIVE_RPC
 
 API = "https://api.morpho.org/graphql"
 QUERY = "{ morphoBlues(where: {chainId_in: [1]}) { items { address creationBlockNumber chain { id } } } }"
@@ -28,7 +29,7 @@ OUT = PROJECT_ROOT / "data" / "discovered"
 
 def main() -> None:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--rpc", default=os.environ.get("ARCHIVE_RPC_URL", "https://ethereum-rpc.publicnode.com"))
+    ap.add_argument("--rpc", default=os.environ.get("ARCHIVE_RPC_URL", PUBLIC_ARCHIVE_RPC))
     ap.add_argument("--markets", default=str(PROJECT_ROOT.parent / "results" / "morpho_pt_markets_clean.csv"))
     a = ap.parse_args()
     now = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")

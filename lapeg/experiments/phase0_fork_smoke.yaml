@@ -5,12 +5,10 @@ seed: 0
 
 fork:
   rpc_url_env: ARCHIVE_RPC_URL
-  # Non-archive public RPC: serves state for roughly the last 128 blocks only, so it is used only when
-  # ARCHIVE_RPC_URL is unset, together with allow_recent_block. Runs on it cannot be replayed later.
-  fallback_rpc_url: https://ethereum-rpc.publicnode.com
-  block: null               # pin a block number here once ARCHIVE_RPC_URL is set
-  allow_recent_block: true  # with no pinned block: fork at head - recent_block_lag
-  recent_block_lag: 8
+  # Used when ARCHIVE_RPC_URL is unset: free public endpoint with archive state (no key, rate-limited).
+  fallback_rpc_url: https://eth.drpc.org
+  block: 26267600           # pinned: 2026-10-25
+  anvil_args: ["--retries", "10", "--fork-retry-backoff", "1000", "--timeout", "60000"]
 
 morpho_discovery: data/discovered/morpho_blue.json
 market:

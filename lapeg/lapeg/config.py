@@ -17,6 +17,13 @@ from pydantic import BaseModel, Field, field_validator
 
 from lapeg import PROJECT_ROOT
 
+# Free public endpoint that serves archive state (checked 2026-10-22,
+# data/discovered/archive_check_drpc.json). No key; eth_getLogs is capped at about 100 blocks per request,
+# and requests occasionally time out.
+PUBLIC_ARCHIVE_RPC = "https://eth.drpc.org"
+# Anvil options that ride out the free tier's timeouts.
+ANVIL_RETRY_ARGS = ["--retries", "10", "--fork-retry-backoff", "1000", "--timeout", "60000"]
+
 
 class ForkConfig(BaseModel):
     rpc_url_env: str = "ARCHIVE_RPC_URL"

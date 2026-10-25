@@ -37,11 +37,11 @@ def upstream(smoke_cfg: ExperimentConfig) -> tuple[str, int]:
 
 
 @pytest.fixture(scope="session")
-def fork(upstream: tuple[str, int]) -> Iterator[AnvilFork]:
+def fork(upstream: tuple[str, int], smoke_cfg: ExperimentConfig) -> Iterator[AnvilFork]:
     if shutil.which("anvil") is None:
         pytest.skip("anvil not installed")
     url, block = upstream
-    f = AnvilFork(url, block).start()
+    f = AnvilFork(url, block, extra_args=smoke_cfg.fork.anvil_args).start()
     try:
         yield f
     finally:

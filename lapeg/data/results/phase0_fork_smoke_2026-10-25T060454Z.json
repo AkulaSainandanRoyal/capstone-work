@@ -1,0 +1,57 @@
+{
+ "experiment": "phase0_fork_smoke",
+ "run_utc": "2026-10-25T060454Z",
+ "rpc_source": "fallback",
+ "fork_block": 26267600,
+ "block_pinned": true,
+ "seed": 0,
+ "morpho_blue": "0xBBBBBbbBBb9cC5e90e3b3Af64bdAF62C37EEFFCb",
+ "market": {
+  "name": "PT-reUSD-10DEC2026",
+  "id": "0x1e9d614631a7df0ec07fb05b2c8cb2491575fd1a63a33bf187a6afb295a4fc64",
+  "params": {
+   "loan_token": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+   "collateral_token": "0xeCfaFdC7741323a945A163ed068B5a3C43483957",
+   "oracle": "0x217d6DdCDB95112C51657F6270e8C079CFDB51f0",
+   "irm": "0x870aC11D48B15DB9a138Cf899d20F13F79Ba00BC",
+   "lltv": 915000000000000000
+  }
+ },
+ "mutation": {
+  "call": "accrueInterest",
+  "advance_seconds": 3600,
+  "caller": "0x0cC90e49BB0Fca0f388b8e27076088E5fEC750a0",
+  "tx_status": 1,
+  "gas_used": 59909
+ },
+ "state_before": {
+  "total_supply_assets": 137958547732576,
+  "total_supply_shares": 134264489746433724932,
+  "total_borrow_assets": 122642507057306,
+  "total_borrow_shares": 118977413637850627185,
+  "last_update": 1792906055,
+  "fee": 0
+ },
+ "state_mutated": {
+  "total_supply_assets": 137959703846340,
+  "total_supply_shares": 134264489746433724932,
+  "total_borrow_assets": 122643663171070,
+  "total_borrow_shares": 118977413637850627185,
+  "last_update": 1792909745,
+  "fee": 0
+ },
+ "state_after_revert": {
+  "total_supply_assets": 137958547732576,
+  "total_supply_shares": 134264489746433724932,
+  "total_borrow_assets": 122642507057306,
+  "total_borrow_shares": 118977413637850627185,
+  "last_update": 1792906055,
+  "fee": 0
+ },
+ "checks": {
+  "fork_at_requested_block": true,
+  "mutation_changed_state": true,
+  "revert_restored_state": true
+ },
+ "passed": true
+}

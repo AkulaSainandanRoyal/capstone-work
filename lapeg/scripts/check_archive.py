@@ -21,9 +21,9 @@ from web3 import Web3
 
 from lapeg import PROJECT_ROOT
 from lapeg.chain.morpho import MorphoBlue, load_morpho_address
+from lapeg.config import ANVIL_RETRY_ARGS, PUBLIC_ARCHIVE_RPC
 from lapeg.fork.anvil import AnvilFork
 
-PUBLIC_FALLBACK = "https://ethereum-rpc.publicnode.com"
 DISCOVERED = PROJECT_ROOT / "data" / "discovered"
 
 
@@ -59,10 +59,10 @@ def main() -> None:
     a = ap.parse_args()
 
     url = os.environ.get(a.rpc_env)
-    source = a.rpc_env if url else "public fallback (ethereum-rpc.publicnode.com)"
+    source = a.rpc_env if url else f"public fallback ({PUBLIC_ARCHIVE_RPC})"
     if a.rpc_label:
         source = f"{source}: {a.rpc_label}"
-    url = url or PUBLIC_FALLBACK
+    url = url or PUBLIC_ARCHIVE_RPC
     w3 = Web3(Web3.HTTPProvider(url, request_kwargs={"timeout": 60}))
     ts = int(datetime.strptime(a.date, "%Y-%m-%d").replace(tzinfo=UTC).timestamp())
     block = block_at(w3, ts)
@@ -80,7 +80,7 @@ def main() -> None:
     ]
     if not a.no_fork:
         def fork_read() -> int:
-            with AnvilFork(url, block) as f:
+            with AnvilFork(url, block, extra_args=ANVIL_RETRY_ARGS) as f:
                 assert f.w3 is not None
                 return MorphoBlue(f.w3, morpho_addr).market(market_id).last_update
         probes.append(probe("fork: anvil at block + Morpho.market(id)", fork_read))

@@ -25,6 +25,7 @@ from eth_abi import decode
 from web3 import Web3
 
 from lapeg import PROJECT_ROOT
+from lapeg.config import PUBLIC_ARCHIVE_RPC
 
 SOURCIFY = "https://sourcify.dev/server/v2/contract/1/{address}?fields=compilation,abi"
 SOURCIFY_CACHE = PROJECT_ROOT / "data" / "raw" / "sourcify"
@@ -185,7 +186,7 @@ def leaves(node: dict[str, Any]) -> list[str]:
 
 def main() -> None:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--rpc", default=os.environ.get("ARCHIVE_RPC_URL", "https://ethereum-rpc.publicnode.com"))
+    ap.add_argument("--rpc", default=os.environ.get("ARCHIVE_RPC_URL", PUBLIC_ARCHIVE_RPC))
     a = ap.parse_args()
     w3 = Web3(Web3.HTTPProvider(a.rpc, request_kwargs={"timeout": 60}))
     block = w3.eth.block_number - 8

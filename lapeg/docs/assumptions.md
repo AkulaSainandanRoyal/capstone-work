@@ -14,10 +14,14 @@ Record: `data/discovered/archive_check_publicnode.json`, `data/discovered/archiv
   `eth_getBalance`, a Morpho `market()` call and an anvil fork at that block all worked (2026-10-22).
   Limits seen: `eth_getLogs` capped at about 100 blocks per request, intermittent HTTP 408 timeouts.
 - `rpc.mevblocker.io` served historical logs with 10,000-block ranges but rate-limits (HTTP 429).
-- **Decision needed:** a free public endpoint can change or disappear. For Phase 3 runs that must be
-  reproducible, get a keyed archive RPC (Alchemy, Infura, drpc or similar) and set `ARCHIVE_RPC_URL`.
-- Until then, experiments may set `allow_recent_block: true`, which forks a recent block on the
-  non-archive fallback. Such runs record the block used but **cannot be replayed** later.
+- **Decision (2026-10-25): use `eth.drpc.org` for now.** It is the default fallback when `ARCHIVE_RPC_URL`
+  is unset (`PUBLIC_ARCHIVE_RPC` in `lapeg/config.py`), and experiments pin their block again
+  (`phase0_fork_smoke` forks block 26267600). Anvil runs with `--retries 10 --fork-retry-backoff 1000
+  --timeout 60000` to ride out the free tier's timeouts.
+- **Risk:** a free endpoint can change limits or disappear. Every run records its block, so switching to a
+  keyed archive RPC later only means setting `ARCHIVE_RPC_URL`; no code changes.
+- Experiments can still set `allow_recent_block: true` to fork a recent block on a non-archive RPC. Such runs
+  record the block used but cannot be replayed.
 
 ## 2. How each market's oracle prices the PT (addendum step 3)
 

@@ -5,14 +5,14 @@ import {Test} from "forge-std/Test.sol";
 import {IMorpho, Id, Market, MarketParams} from "../contracts/vendor/morpho-blue/interfaces/IMorpho.sol";
 
 /// Phase 0 acceptance, Solidity side: fork mainnet, read a Morpho Blue market, snapshot, mutate, revert.
-/// RPC: ARCHIVE_RPC_URL, else the public non-archive fallback. Block: LAPEG_FORK_BLOCK, else latest.
+/// RPC: ARCHIVE_RPC_URL, else the free public archive endpoint. Block: LAPEG_FORK_BLOCK, else latest.
 /// Morpho address and market id come from data/discovered/ (written by scripts/discover_morpho.py).
 contract ForkSmokeTest is Test {
     IMorpho morpho;
     Id id;
 
     function setUp() public {
-        string memory url = vm.envOr("ARCHIVE_RPC_URL", string("https://ethereum-rpc.publicnode.com"));
+        string memory url = vm.envOr("ARCHIVE_RPC_URL", string("https://eth.drpc.org"));
         uint256 blockNumber = vm.envOr("LAPEG_FORK_BLOCK", uint256(0));
         if (blockNumber == 0) vm.createSelectFork(url);
         else vm.createSelectFork(url, blockNumber);
