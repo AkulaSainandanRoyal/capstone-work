@@ -8,11 +8,17 @@ import sys
 
 from lapeg.config import load_experiment
 from lapeg.fork.smoke import run_fork_smoke
+from lapeg.guard.experiment import run_cascade_and_guard
+from lapeg.liquidity.experiment import run_liquidity
 from lapeg.market.experiment import run_position_book
 
-RUNNERS = {"phase0_fork_smoke": run_fork_smoke, "phase1_position_book": run_position_book}
-SUMMARY_KEYS = ("experiment", "rpc_source", "fork_block", "block_pinned", "n_events", "n_accounts",
-                "n_borrowers", "max_hf_rel_error", "min_health_factor", "seconds", "checks", "passed")
+RUNNERS = {"phase0_fork_smoke": run_fork_smoke, "phase1_position_book": run_position_book,
+           "phase2_liquidity": run_liquidity, "phase45_cascade_guard": run_cascade_and_guard}
+SUMMARY_KEYS = (
+    "experiment", "rpc_source", "fork_block", "block_pinned", "n_events", "n_accounts", "n_borrowers",
+    "max_hf_rel_error", "min_health_factor", "q_max", "delta_star", "end_to_end", "c_star",
+    "consistency_with_morpho", "seconds", "checks", "passed",
+)
 
 
 def main() -> None:

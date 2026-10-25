@@ -1,0 +1,25 @@
+# Phases 4 and 5 (shortened scope): fast-tier cascades and guard v0 on measured data.
+# Needs a completed Phase 2 run (reads the latest phase2_liquidity_*.json and its outputs). No network.
+# Run: python scripts/run_experiment.py experiments/phase45_cascade_guard.yaml
+name: phase45_cascade_guard
+seed: 0
+
+fork:                       # not used (no fork); kept for a uniform config shape
+  rpc_url_env: ARCHIVE_RPC_URL
+  fallback_rpc_url: https://eth.drpc.org
+
+market:
+  name: PT-reUSD-10DEC2026
+  market_id: "0x1e9d614631a7df0ec07fb05b2c8cb2491575fd1a63a33bf187a6afb295a4fc64"
+
+results_dir: data/results
+
+params:
+  latency_blocks: 1          # liquidators act one block after a position becomes liquidatable
+  twap_blocks: 75            # 900 s Pendle TWAP at 12 s per block
+  horizon_blocks: 300        # one hour
+  replenish_per_block: 0.0   # no arbitrage refill within the horizon (conservative)
+  oracle_shocks: [0.01, 0.02, 0.03, 0.05, 0.1]
+  sale_shocks_usd: [1000000, 2000000, 5000000, 10000000, 20000000]
+  guard_sales_usd: [500000, 5000000, 20000000]
+  max_delays: 2
