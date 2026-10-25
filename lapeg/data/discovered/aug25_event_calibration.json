@@ -1,0 +1,56 @@
+{
+ "source": "data/discovered/aug25_event.json",
+ "market_id": "0x1e9d614631a7df0ec07fb05b2c8cb2491575fd1a63a33bf187a6afb295a4fc64",
+ "collateral": "PT-reUSD-10DEC2026",
+ "loan": "USDC",
+ "n_liquidations": 16,
+ "n_borrowers": 13,
+ "liquidators": {
+  "0x51a453d677396F62fbb1dff9925a205fa96fAB5e": {
+   "liquidations": 10,
+   "repaid": 34206275.151101,
+   "share_of_repaid": 0.9720928512843356,
+   "borrowers": 10
+  },
+  "0x681B072b7555C4C57a12eEC8E90a2914EE733816": {
+   "liquidations": 2,
+   "repaid": 835513.3393679999,
+   "share_of_repaid": 0.023744080311714197,
+   "borrowers": 2
+  },
+  "0x36331E299247E5D0D3261e1d9852f6E0cFFEe95C": {
+   "liquidations": 4,
+   "repaid": 146491.215433,
+   "share_of_repaid": 0.004163068403950124,
+   "borrowers": 4
+  }
+ },
+ "herfindahl_repaid": 0.9455456240064946,
+ "repaid_per_liquidation": {
+  "n": 16,
+  "min": 147.363027,
+  "median": 379159.8472675,
+  "mean": 2199267.481618875,
+  "max": 13010179.66309,
+  "sum": 35188279.705902
+ },
+ "seized_per_liquidation": {
+  "n": 16,
+  "min": 159.325503,
+  "median": 405895.15056,
+  "mean": 2350270.847339875,
+  "max": 13890041.036744,
+  "sum": 37604333.557438
+ },
+ "blocks_between_liquidations": {
+  "n": 15,
+  "min": 1.0,
+  "median": 3.0,
+  "mean": 3.6,
+  "max": 7.0,
+  "sum": 54.0
+ },
+ "first_block": 25829868,
+ "last_block": 25829922,
+ "bad_debt": 0.0
+}
