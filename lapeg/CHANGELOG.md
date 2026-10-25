@@ -3,6 +3,41 @@
 All notable changes to LAPEG, by phase. Dates are UTC. Commit hashes refer to the `phase-0` branch.
 Details behind each finding are in [`docs/assumptions.md`](docs/assumptions.md).
 
+## Phases 2 to 5 and the playground. 2026-10-25 (in progress)
+
+### Added
+- **Execution on the fork** (`lapeg/liquidity/`). Pendle Convert API routes are executed as sent, and the Pendle
+  pool alone is measured through the router's `swapExactPtForSy`. ABIs come from Sourcify-verified contracts
+  (`scripts/fetch_verified_abis.py`); the router is discovered from the API and verified
+  (`scripts/discover_pendle_router.py`).
+- **Oracle override** (`lapeg/oracle/override.py`, `contracts/MockAggregator.sol`): the PT-reUSD Ojo feed's two
+  sources are pointed at a mock; Morpho's oracle then returns the target exactly.
+- **Gas, flash liquidity and capacity** (`lapeg/liquidity/capacity.py`). ETH/USD is resolved on-chain via ENS.
+- **Illiquidity metrics** with definitions and rationale (`lapeg/metrics/`).
+- **Phase 2 experiment** (`experiments/phase2_liquidity.yaml`): depth grid, bisection to `q_max`, position book at
+  the same block, protocol-verified oracle shocks, `Delta*`, and an end-to-end liquidation plus sale.
+- **Real-node cross-check** (`lapeg/liquidity/realnode.py`): a route that fails on the fork is simulated on the
+  archive node at the same block, which separates genuine reverts from fork artifacts.
+- **Checkpoint and resume** for Phase 2, and automatic anvil restarts on dropped connections.
+- **Phase 3 (v0):** design document; liquidator concentration and sizes from Aug 25 events.
+- **Phase 4 fast tier** (`lapeg/cascade/fast.py`) and **Phase 5 guard v0** (`lapeg/guard/`). DELAY is used instead
+  of DROP; DROP stays off by default.
+- **Design for Phases 4 to 7** (`docs/design_phases4_7.md`).
+- **Interactive playground** (`lapeg/app/`): positions, oracle shocks, trading with time travel, do-it-yourself
+  liquidations, the guard, recorded runs, and undo.
+
+### Fixed
+- A slow fork receipt (over 120 s while anvil fetched state) was recorded as a revert. Receipts now wait up to
+  15 minutes, and timeouts get their own status, one retry, and are excluded from `q_max`.
+
+### Findings so far
+- Aggregator routes replay on the fork; at $1M the executed output matches the quote to within $0.46.
+- At $3.9M, OKX's quoted route reverts on mainnet too (`ARM: Insufficient liquidity`): quotes can overstate
+  executable depth.
+- Gas is about $0.23 per sale at the current base fee.
+- The Pendle pool alone cannot absorb 10M PT; the API's routes reach further through Pendle limit orders and DEX
+  venues.
+
 ## Phase 1 (lite): market model. 2026-10-25
 
 Position book for PT-reUSD-10DEC2026/USDC at block 26267600, with health factors checked against Morpho's own code.

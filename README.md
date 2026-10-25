@@ -1,12 +1,12 @@
 # Measurement and Mitigation of Illiquidity in Collateral-Based Lending in DeFi
 
-**Undergraduate capstone.** Status as of 2026-10-25.
+**Undergraduate capstone.** Status as of 2026-10-25 (Phase 2 measurement running).
 Next milestone: **Review 2 (Nov 2 or 3, 2026)**: further implementation, an extended literature survey and an architecture/block diagram.
 
 | Track | Question | Code | Status |
 |---|---|---|---|
 | **Measurement** | How much collateral can one liquidation sell profitably ($q_{max}$), and what price shock puts more than that up for sale ($\Delta^*$)? | [`pendle_ladder_all.py`](pendle_ladder_all.py), [`layer2_borrowers.py`](layer2_borrowers.py) | Done for 3 markets (Oct 18 and 19); daily snapshots running |
-| **Mitigation: LAPEG** | Can a guard that simulates pending transactions on a mainnet fork, where a block builder sits, stop transactions that trigger liquidations the market cannot absorb? | [`lapeg/`](lapeg/) | Phases 0 and 1 (lite) done; target for Review 2 is a thin slice (LAPEG v0) on one market |
+| **Mitigation: LAPEG** | Can a guard that simulates pending transactions on a mainnet fork, where a block builder sits, stop transactions that trigger liquidations the market cannot absorb? | [`lapeg/`](lapeg/) | Phases 0 and 1 done; Phase 2 measuring; Phases 3 to 5 at v0 (design, fast tier, guard v0); interactive playground built |
 
 **Contents**
 1. [Overview](#1-overview)
@@ -44,6 +44,8 @@ The project studies three Morpho Blue markets that accept **Pendle Principal Tok
 - **The three oracles work differently.** PT-reUSD's oracle follows the Pendle market price (a 15-minute TWAP), so a price-feedback spiral is possible there. PT-USD3's is a fixed 30%/yr discount that ignores the market. PT-sUSDS's currently uses a fixed 13%/yr discount.
 - **The Aug 25, 2026 liquidations are real and hit the target market.** In the PT-reUSD-10DEC2026/USDC market, 16 liquidations repaid $35.19M within 55 blocks (04:37 to 04:48 UTC), with no bad debt. The largest single liquidation repaid $13.01M, close to the market's $q_{max}$.
 - **Historical state is available for free.** The public endpoint `eth.drpc.org` serves archive state, so the fork can start at Aug 25.
+- **Quoted depth is not the same as executable depth.** Pendle's aggregator routes execute on a fork up to $2.56M, and at $1M the output matches the quote to within $0.46. At $3.9M, OKX's quoted route reverts on mainnet too (`ARM: Insufficient liquidity`): the aggregator priced liquidity a venue did not have. Layer 1's quote-based $q_{max}$ may therefore overstate what liquidators can actually sell (Phase 2 measures this size by size).
+- **One liquidator did almost all of Aug 25.** One address repaid 97.2% of the $35.19M (10 of 16 liquidations); liquidations came 1 to 7 blocks apart.
 
 ## 2. Terminology
 
@@ -418,11 +420,11 @@ The full spec has eight phases. For Review 2 the target is a thin vertical slice
 |---|---|---|---|
 | 0 | Fork lifecycle, snapshots, impersonation, balances, storage writes, RPC cache | Full | **Done** (34 pytest + 1 forge test; acceptance passes at pinned block 26267600) |
 | 1 | Market model: position book from events, health factors matched to Morpho's own views | Lite: one market | **Done** (271 borrowers at block 26267600; health factors match Morpho exactly; Morpho's own `liquidate` agrees for all) |
-| 2 | Depth curve on the fork, $G(q)$, oracle override, $q_{max}$, liquidator capacity, illiquidity metric | Full for one market | Planned; fork $P_{exec}$ must match the API quote at the current block |
-| 3 | Agents, calibration, Aug 25 replay (the validation gate), $C^*$ search | Design; event discovery started | Aug 25 event located (section 8.3) |
-| 4 | Cascade predictor: exact tier and fast tier | Fast tier only | Planned (extends Layer 2 with the feedback loop) |
-| 5 | Guard and policy, reorder search | Guard v0: PASS or DROP on one synthetic transaction, with a counterfactual log | Planned |
-| 6, 7 | Evaluation harness, baselines; other protocols and RWA collateral | Design only | Not started |
+| 2 | Depth curve on the fork, $G(q)$, oracle override, $q_{max}$, liquidator capacity, illiquidity metric | Full for one market | **Built, measurement running.** Sales executed on the fork up to $2.56M ($G$ 0.023% to 0.099%, preliminary run); at $1M the executed output matched the API quote to within $0.46; oracle override exact; gas about $0.23 per sale; $126M of Morpho flash liquidity. Final $q_{max}$ and $\Delta^*$ pending |
+| 3 | Agents, calibration, Aug 25 replay (the validation gate), $C^*$ search | Design; event discovery and calibration | **Design written** ([`phase3_design.md`](lapeg/docs/phase3_design.md)); Aug 25 located; liquidator concentration and sizes calibrated; latency calibration to do |
+| 4 | Cascade predictor: exact tier and fast tier | Fast tier only | **Fast tier built** (TWAP lag, latency, feedback loop; unit-tested); runs on measured data once Phase 2 finishes |
+| 5 | Guard and policy, reorder search | Guard v0: PASS or DELAY on pending transactions, with a counterfactual log | **Guard v0 built** (DELAY instead of DROP, which stays off by default as the spec requires) |
+| 6, 7 | Evaluation harness, baselines; other protocols and RWA collateral | Design only | **Design written** ([`design_phases4_7.md`](lapeg/docs/design_phases4_7.md)) |
 
 **Cut order if time runs short** (cut from the bottom): guard v0 becomes a design slide; the fast-tier cascade runs on the API-derived depth curve instead of the fork; Phase 2 runs on the API curve only.
 
@@ -444,10 +446,10 @@ All records are in [`lapeg/data/discovered/`](lapeg/data/discovered/), each with
 | # | Conflict | Resolution |
 |---|---|---|
 | 1 | The Phase 2 sanity check ($G \approx 0$ at tiny $q$) | Holds only where the oracle follows the market. Resolved by reading the oracles: applies to PT-reUSD; the linear-discount oracles of PT-USD3 and PT-sUSDS sit below the market by design |
-| 2 | API quotes cannot be replayed at a past block | The fork executes swaps itself. The API remains a live cross-check: fork $P_{exec}$ at the current block must match the API quote (shared Phase 2 acceptance test) |
+| 2 | API quotes cannot be replayed at a past block | **Resolved, with a finding.** The fork executes the API's routes at the current block (at $1M the output matches the quote to within $0.46; the full size-by-size comparison is part of the running Phase 2 measurement). Above that some quoted routes revert, and a real-node cross-check shows at least one (OKX at $3.9M) reverts on mainnet too: quotes can overstate executable depth |
 | 3 | $q_{max}$ must cover refusals | Defined as the largest size that both executes and stays under the bonus; a reverted swap on the fork counts as a failure |
-| 4 | Gas is in the spec's profitability condition but not in $S_o$ | Open. One Convert API response showed about 3.0M gas for a $1M sale; whether its listed fee is already netted from the output is unverified |
-| 5 | Replaying router calldata on the fork | Open. Aggregator calldata can embed deadlines or signatures; to be tested early in Phase 2, with a fallback route that avoids the aggregator |
+| 4 | Gas is in the spec's profitability condition but not in $S_o$ | **Resolved.** Gas is measured on the fork (1.9M to 2.9M per sale) and priced with Chainlink ETH/USD: about $0.23 at the current base fee, negligible. A 100 gwei stress scenario is also reported |
+| 5 | Replaying router calldata on the fork | **Resolved.** Both KyberSwap and OKX routes replay on the fork, including Pendle limit-order fills. A Pendle-only route (no aggregator) is also measured |
 
 ### 8.5 Unverified claims in the spec
 
@@ -461,6 +463,29 @@ All records are in [`lapeg/data/discovered/`](lapeg/data/discovered/), each with
 
 ---
 
+### 8.6 Interactive playground
+
+A local browser app where a user acts on a live mainnet fork of the target market and sees what LAPEG predicts.
+It calls the same functions the experiments use, so what a user clicks is what is tested.
+
+| Tab | What the user does |
+|---|---|
+| Positions | Browse every borrower, with health factors computed by Morpho's own code |
+| Shock the oracle | Drag a slider to force the oracle down; Morpho decides who becomes liquidatable |
+| Trade and time | Sell PT into the market, then advance time and watch the 15-minute TWAP oracle catch up |
+| Liquidate | Liquidate a position with Morpho's real `liquidate`, sell the seized PT, see the profit or loss after gas |
+| Guard | Submit a pending sale; guard v0 answers PASS or DELAY, with the counterfactual |
+| Recorded runs | Depth curve, oracle shocks, the Aug 25 timeline and guard decisions from recorded experiments |
+
+Every action can be undone (fork snapshots). Forks can start at the latest block, a recorded block, or just before
+the Aug 25 liquidations. Nothing leaves the local fork: accounts are impersonated, with no wallet, keys or funds.
+
+```bash
+cd lapeg
+pip install -e ".[app]"
+streamlit run lapeg/app/playground.py
+```
+
 ## 9. Roadmap
 
 **Review 2 (Nov 2 or 3, 2026)**
@@ -470,9 +495,12 @@ All records are in [`lapeg/data/discovered/`](lapeg/data/discovered/), each with
 - [x] LAPEG groundwork: archive access, interfaces, oracle sources, Aug 25 event scan
 - [x] LAPEG Phase 0: fork control and RPC cache, acceptance passing
 - [x] LAPEG Phase 1 (lite): position book for PT-reUSD with health factors matched to Morpho within $10^{-9}$ (achieved: exact)
-- [ ] LAPEG Phase 2: depth curve and $G(q)$ on the fork, oracle override, $q_{max}$, API cross-check
-- [ ] LAPEG Phase 4 fast tier: cascade with feedback on the depth curve
-- [ ] LAPEG guard v0: PASS or DROP on one synthetic transaction, with a counterfactual log
+- [ ] LAPEG Phase 2: depth curve and $G(q)$ on the fork, oracle override, $q_{max}$, API cross-check (built; measurement running)
+- [x] LAPEG Phase 3 (v0): design, event discovery, liquidator concentration and size calibration
+- [x] LAPEG Phase 4 fast tier: cascade with feedback (built and unit-tested; to run on Phase 2 data)
+- [x] LAPEG guard v0: PASS or DELAY with a counterfactual log (built and unit-tested)
+- [x] Interactive playground (section 8.6)
+- [x] Design for Phases 4 to 7
 - [ ] Architecture/block diagram (draft in section 8.1)
 - [ ] Extended literature survey (teammates)
 - [ ] Slides
@@ -497,4 +525,5 @@ requirements.txt                  measurement dependencies (pinned)
 results/                          measurement inputs and outputs; results/daily/ from the workflow
 .github/workflows/                daily snapshot workflow
 lapeg/                            mitigation: LAPEG research prototype (own README, pyproject, tests)
+lapeg/lapeg/app/                  interactive playground (Streamlit)
 ```
