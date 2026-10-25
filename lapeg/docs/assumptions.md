@@ -18,6 +18,9 @@ Record: `data/discovered/archive_check_publicnode.json`, `data/discovered/archiv
   is unset (`PUBLIC_ARCHIVE_RPC` in `lapeg/config.py`), and experiments pin their block again
   (`phase0_fork_smoke` forks block 26267600). Anvil runs with `--retries 10 --fork-retry-backoff 1000
   --timeout 60000` to ride out the free tier's timeouts.
+- **Rate limit (seen 2026-10-25):** with anvil's own request throttle disabled (`--no-rate-limit`), drpc answered
+  HTTP 429 ("You reached Public endpoint rate limit"). The throttle stays on. Long runs checkpoint every measured
+  size and restart anvil at the same block after upstream failures.
 - **Risk:** a free endpoint can change limits or disappear. Every run records its block, so switching to a
   keyed archive RPC later only means setting `ARCHIVE_RPC_URL`; no code changes.
 - Experiments can still set `allow_recent_block: true` to fork a recent block on a non-archive RPC. Such runs

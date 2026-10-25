@@ -13,7 +13,7 @@ fork:
   block: null
   allow_recent_block: true
   recent_block_lag: 0
-  anvil_args: ["--retries", "10", "--fork-retry-backoff", "1000", "--timeout", "60000", "--no-rate-limit"]
+  anvil_args: ["--retries", "10", "--fork-retry-backoff", "1000", "--timeout", "60000"]  # keep anvil's throttle
 
 logs:                                   # used to rebuild the position book at the same block (Phase 1)
   rpc_url_env: LOGS_RPC_URL
@@ -38,6 +38,7 @@ params:
   rel_tol: 0.02
   stress_priority_fee_gwei: 100
   shocks: [0.005, 0.01, 0.015, 0.02, 0.025, 0.03, 0.05, 0.075, 0.1, 0.15, 0.2]
+  fork_retries: 6            # restart anvil at the same block after transient upstream failures
   end_to_end: true           # at Delta*: real liquidate + sale of the seized PT on the fork
   tiny_g_tol: 0.005          # acceptance: |G| at the smallest size (oracle follows a 15-min TWAP)
   monotone_tol: 0.0001       # acceptance: G non-decreasing in q, up to this tolerance

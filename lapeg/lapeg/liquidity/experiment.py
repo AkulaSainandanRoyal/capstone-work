@@ -27,6 +27,7 @@ from typing import Any
 import pandas as pd
 import requests
 from web3 import Web3
+from web3.exceptions import Web3RPCError
 
 from lapeg import PROJECT_ROOT
 from lapeg.chain.abi import load_abi
@@ -71,6 +72,22 @@ def _head_block(url: str, attempts: int = 6) -> int:
                 raise
             time.sleep(2**i)
     raise AssertionError("unreachable")
+
+
+def _upstream_failure(e: Exception) -> bool:
+    """Anvil could not fetch forked state from the upstream RPC (rate limit, dropped connection)."""
+    msg = str(e).lower()
+    return any(
+        k in msg
+        for k in (
+            "failed to get account",
+            "failed to get storage",
+            "429",
+            "rate limit",
+            "connection closed",
+            "error sending request",
+        )
+    )
 
 
 def _checkpoint_path(cfg: ExperimentConfig) -> Path:
@@ -331,7 +348,9 @@ def run_liquidity(cfg: ExperimentConfig, write_results: bool = True) -> dict[str
                 flash = flash_liquidity(w3, morpho_addr, usdc)
                 sy_dec = int(w3.eth.contract(address=sy, abi=load_abi("ERC20")).functions.decimals().call())
             break
-        except (AnvilError, requests.exceptions.ConnectionError, TimeoutError) as e:
+        except (AnvilError, requests.exceptions.ConnectionError, TimeoutError, Web3RPCError) as e:
+            if isinstance(e, Web3RPCError) and not _upstream_failure(e):
+                raise  # a genuine RPC error, not the free endpoint failing
             # the free endpoint dropped a connection: restart anvil at the same block; finished sizes are
             # kept in the checkpoint and skipped
             print(
@@ -339,7 +358,7 @@ def run_liquidity(cfg: ExperimentConfig, write_results: bool = True) -> dict[str
             )
             if attempt == retries - 1:
                 raise
-            time.sleep(10)
+            time.sleep(60 if "429" in str(e) or "rate limit" in str(e).lower() else 10)
 
     # 5. position book at the same block
     book_cfg = cfg.model_copy(
