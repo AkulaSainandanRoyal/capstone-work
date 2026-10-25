@@ -8,5 +8,8 @@
  ],
  "ERC20": [
   "out/IERC20.sol/IERC20.json"
+ ],
+ "HealthReader": [
+  "out/HealthReader.sol/HealthReader.json"
  ]
 }

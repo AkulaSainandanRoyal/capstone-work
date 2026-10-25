@@ -4,6 +4,8 @@ Outputs (committed, so Python does not need forge at runtime):
     lapeg/chain/abis/Morpho.json   IMorpho functions + EventsLib events (Morpho Blue v1.0.0)
     lapeg/chain/abis/Oracle.json   IOracle (Morpho oracle interface)
     lapeg/chain/abis/ERC20.json    forge-std IERC20
+    lapeg/chain/abis/HealthReader.json, lapeg/chain/bytecode/HealthReader.hex
+                                   helper ABI and runtime code (injected with eth_call state overrides)
     lapeg/chain/abis/SOURCES.json  which artifact each ABI came from
 
 Usage: python scripts/build_abis.py [--no-build]
@@ -22,7 +24,10 @@ TARGETS = {
     "Morpho": [("IMorpho.sol", "IMorpho"), ("EventsLib.sol", "EventsLib")],
     "Oracle": [("IOracle.sol", "IOracle")],
     "ERC20": [("IERC20.sol", "IERC20")],
+    "HealthReader": [("HealthReader.sol", "HealthReader")],
 }
+RUNTIME = {"HealthReader": ("HealthReader.sol", "HealthReader")}   # helpers whose runtime code we inject
+BYTECODE_DIR = ROOT / "lapeg" / "chain" / "bytecode"
 
 
 def artifact_abi(source: str, contract: str) -> list[dict]:
@@ -49,6 +54,15 @@ def main() -> None:
         sources[name] = [f"out/{s}/{c}.json" for s, c in parts]
         print(f"{name}: {len(abi)} entries")
     (ABI_DIR / "SOURCES.json").write_text(json.dumps(sources, indent=1) + "\n")
+
+    BYTECODE_DIR.mkdir(parents=True, exist_ok=True)
+    for name, (source, contract) in RUNTIME.items():
+        art = json.loads((OUT / source / f"{contract}.json").read_text())
+        code = art["deployedBytecode"]["object"]
+        if not code or code == "0x":
+            raise SystemExit(f"{contract} has no runtime bytecode")
+        (BYTECODE_DIR / f"{name}.hex").write_text(code + "\n")
+        print(f"{name}: runtime code {len(code) // 2 - 1} bytes")
 
 
 if __name__ == "__main__":
