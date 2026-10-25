@@ -1,0 +1,34 @@
+{
+ "checked_utc": "2026-10-22T17:35:10Z",
+ "rpc": "ARCHIVE_RPC_URL: eth.drpc.org (public, no key)",
+ "target_date": "2026-08-25",
+ "target_block": 25828483,
+ "archive_state_available": true,
+ "probes": [
+  {
+   "probe": "history: eth_getBlockByNumber",
+   "ok": true,
+   "result": 1787615999
+  },
+  {
+   "probe": "history: eth_getLogs (Morpho, 10 blocks)",
+   "ok": true,
+   "result": 34
+  },
+  {
+   "probe": "state: eth_getBalance",
+   "ok": true,
+   "result": 0
+  },
+  {
+   "probe": "state: Morpho.market(id) eth_call",
+   "ok": true,
+   "result": 1787615975
+  },
+  {
+   "probe": "fork: anvil at block + Morpho.market(id)",
+   "ok": true,
+   "result": 1787615975
+  }
+ ]
+}

@@ -1,0 +1,12 @@
+[profile.default]
+src = "contracts"
+test = "test"
+out = "out"
+libs = ["lib"]
+solc_version = "0.8.19"   # the version Morpho Blue v1.0.0 is compiled with
+evm_version = "paris"
+optimizer = false
+fs_permissions = [{ access = "read", path = "./" }]
+
+[rpc_endpoints]
+archive = "${ARCHIVE_RPC_URL}"

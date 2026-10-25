@@ -1,0 +1,420 @@
+{
+ "block": 26249608,
+ "retrieved_utc": "2026-10-22T17:21:22Z",
+ "method": "eth_getCode (EIP-1167 resolution) + Sourcify verified ABI + eth_call of zero-arg views",
+ "sourcify_api": "https://sourcify.dev/server/v2/contract/1/{address}?fields=compilation,abi",
+ "markets": {
+  "PT-reUSD-10DEC2026": {
+   "oracle": "0x217d6DdCDB95112C51657F6270e8C079CFDB51f0",
+   "leaf_sources": [
+    "PendleChainlinkOracle",
+    "PendleSparkLinearDiscountOracle"
+   ],
+   "tree": {
+    "address": "0x217d6DdCDB95112C51657F6270e8C079CFDB51f0",
+    "eip1167_implementation": null,
+    "verified_name": "MorphoChainlinkOracleV2",
+    "values": {
+     "BASE_FEED_1": "0x77eE147391EAc11c92817e771860ff4AAd265D89",
+     "BASE_FEED_2": "0x0000000000000000000000000000000000000000",
+     "BASE_VAULT": "0x0000000000000000000000000000000000000000",
+     "BASE_VAULT_CONVERSION_SAMPLE": 1,
+     "QUOTE_FEED_1": "0x0000000000000000000000000000000000000000",
+     "QUOTE_FEED_2": "0x0000000000000000000000000000000000000000",
+     "QUOTE_VAULT": "0x0000000000000000000000000000000000000000",
+     "QUOTE_VAULT_CONVERSION_SAMPLE": 1,
+     "SCALE_FACTOR": "1000000000000000000",
+     "price": "985193373300877274000000000000000000"
+    },
+    "children": {
+     "BASE_FEED_1": {
+      "address": "0x77eE147391EAc11c92817e771860ff4AAd265D89",
+      "eip1167_implementation": "0x5AAb95E3C6F9bA0CCfa0a17c2C7235633C7C6585",
+      "verified_name": "OjoPTFeed",
+      "values": {
+       "FEED_1": "0x570eA68f11e63a9108514eB73Dc4f88232C9e7f6",
+       "FEED_2": "0x7cfD3Ed001D9D65d4022Db4e15c6101db2BbC994",
+       "STALENESS_THRESHOLD": 86400,
+       "decimals": 18,
+       "description": "Ojo PT Feed Pendle Chainlink-compatible Oracle",
+       "getActiveOracle": "0x570eA68f11e63a9108514eB73Dc4f88232C9e7f6",
+       "latestRoundData": [
+        0,
+        "985193373300877274",
+        0,
+        1792689587,
+        0
+       ],
+       "version": 1
+      },
+      "children": {
+       "FEED_1": {
+        "address": "0x570eA68f11e63a9108514eB73Dc4f88232C9e7f6",
+        "eip1167_implementation": null,
+        "verified_name": "PendleChainlinkOracle",
+        "values": {
+         "baseOracleType": 1,
+         "decimals": 18,
+         "description": "Pendle Chainlink-compatible Oracle",
+         "factory": "0x9E5129dcC15d39625617DcD7F0F44FB0BB957FFd",
+         "fromTokenScale": 1000000,
+         "latestRoundData": [
+          0,
+          "985193373300877274",
+          0,
+          1792689587,
+          0
+         ],
+         "market": "0x13285bCbc27F92b47B4EDB99D744C07B48C977c0",
+         "toTokenScale": 1000000,
+         "twapDuration": 900,
+         "version": 1
+        },
+        "children": {
+         "factory": {
+          "address": "0x9E5129dcC15d39625617DcD7F0F44FB0BB957FFd",
+          "verified_name": "PendleChainlinkOracleFactory"
+         },
+         "market": {
+          "address": "0x13285bCbc27F92b47B4EDB99D744C07B48C977c0",
+          "verified_name": "PendleMarketV7"
+         }
+        }
+       },
+       "FEED_2": {
+        "address": "0x7cfD3Ed001D9D65d4022Db4e15c6101db2BbC994",
+        "eip1167_implementation": null,
+        "verified_name": "ChainlinkCurrentTimestampAdapter",
+        "values": {
+         "decimals": 18,
+         "innerOracle": "0x8e42d93Eac7dFEF8d061dD18A2aCFC839e724309",
+         "latestRoundData": [
+          0,
+          "992063902207001523",
+          0,
+          1792689587,
+          0
+         ]
+        },
+        "children": {
+         "innerOracle": {
+          "address": "0x8e42d93Eac7dFEF8d061dD18A2aCFC839e724309",
+          "eip1167_implementation": null,
+          "verified_name": "PendleSparkLinearDiscountOracle",
+          "values": {
+           "PT": "0xeCfaFdC7741323a945A163ed068B5a3C43483957",
+           "baseDiscountPerYear": "60000000000000000",
+           "decimals": 18,
+           "latestRoundData": [
+            0,
+            "992063902207001523",
+            0,
+            0,
+            0
+           ],
+           "maturity": 1796860800
+          },
+          "children": {
+           "PT": {
+            "address": "0xeCfaFdC7741323a945A163ed068B5a3C43483957",
+            "verified_name": null
+           }
+          }
+         }
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "PT-USD3-17DEC2026": {
+   "oracle": "0xe5E6Ec063E63A9D0c6Ac041d0AD2bd03F7f08d72",
+   "leaf_sources": [
+    "PendleSparkLinearDiscountOracle"
+   ],
+   "tree": {
+    "address": "0xe5E6Ec063E63A9D0c6Ac041d0AD2bd03F7f08d72",
+    "eip1167_implementation": null,
+    "verified_name": "MorphoChainlinkOracleV2 (inferred: bytecode equals verified 0x217d6DdCDB95112C51657F6270e8C079CFDB51f0 except immutables)",
+    "values": {
+     "BASE_FEED_1": "0xDb87Eb32a784286312DE3A73b2446bb83467eF8d",
+     "BASE_FEED_2": "0x0000000000000000000000000000000000000000",
+     "BASE_VAULT": "0x0000000000000000000000000000000000000000",
+     "BASE_VAULT_CONVERSION_SAMPLE": 1,
+     "QUOTE_FEED_1": "0x0000000000000000000000000000000000000000",
+     "QUOTE_FEED_2": "0x0000000000000000000000000000000000000000",
+     "QUOTE_VAULT": "0x0000000000000000000000000000000000000000",
+     "QUOTE_VAULT_CONVERSION_SAMPLE": 1,
+     "SCALE_FACTOR": "1000000000000000000",
+     "price": "954566086377473364000000000000000000"
+    },
+    "children": {
+     "BASE_FEED_1": {
+      "address": "0xDb87Eb32a784286312DE3A73b2446bb83467eF8d",
+      "eip1167_implementation": null,
+      "verified_name": "PendleLinearDiscountOracleWrapper",
+      "values": {
+       "decimals": 18,
+       "innerOracle": "0x68EfEdb720F4fFbA213745B21756365fa8617B9b",
+       "latestRoundData": [
+        0,
+        "954566086377473364",
+        0,
+        1792689587,
+        0
+       ]
+      },
+      "children": {
+       "innerOracle": {
+        "address": "0x68EfEdb720F4fFbA213745B21756365fa8617B9b",
+        "eip1167_implementation": null,
+        "verified_name": "PendleSparkLinearDiscountOracle",
+        "values": {
+         "PT": "0x7f47c3e6b2c00fC4eB4d5Ae50d0Ab0Ab6888Eb4D",
+         "baseDiscountPerYear": "300000000000000000",
+         "decimals": 18,
+         "latestRoundData": [
+          0,
+          "954566086377473364",
+          0,
+          0,
+          0
+         ],
+         "maturity": 1797465600
+        },
+        "children": {
+         "PT": {
+          "address": "0x7f47c3e6b2c00fC4eB4d5Ae50d0Ab0Ab6888Eb4D",
+          "verified_name": "PendlePrincipalToken"
+         }
+        }
+       }
+      }
+     }
+    },
+    "inference": {
+     "reference": "0x217d6DdCDB95112C51657F6270e8C079CFDB51f0",
+     "code_bytes": 2598,
+     "differing_bytes": 40,
+     "differing_runs": 2,
+     "all_runs_inside_own_immutables": true
+    }
+   }
+  },
+  "PT-sUSDS-26NOV2026": {
+   "oracle": "0x3464a61A68C486241FE07201C913F055Bdce35BF",
+   "leaf_sources": [
+    "DummyFeed",
+    "EACAggregatorProxy",
+    "PendleChainlinkOracle",
+    "PendleSparkLinearDiscountOracle (inferred: bytecode equals verified 0x68EfEdb720F4fFbA213745B21756365fa8617B9b except immutables)"
+   ],
+   "tree": {
+    "address": "0x3464a61A68C486241FE07201C913F055Bdce35BF",
+    "eip1167_implementation": "0x9B4655239E91dc9E1f7599bB88FBA41B4542de5B",
+    "verified_name": "not verified on Sourcify",
+    "values": {
+     "primaryOracle": "0x89DaE86Eb86cBc4dd2f52031c997A21aB9a950C5",
+     "backupOracle": "0x77aE9b629096D0Ae0206878b163cCa232276c88e",
+     "currentOracle": "0x89DaE86Eb86cBc4dd2f52031c997A21aB9a950C5",
+     "isPrimary": true,
+     "isBackup": false,
+     "deviationThreshold": 7500000000000000,
+     "getDeviation": 196108450983984,
+     "isDeviant": false,
+     "isChallenged": false,
+     "isHealing": false,
+     "primaryPrice": "987791422818366312000000",
+     "backupPrice": "987597746554094314917206",
+     "price": "987791422818366312000000",
+     "challengeTimelockDuration": 57600,
+     "healingTimelockDuration": 86400
+    },
+    "children": {
+     "primaryOracle": {
+      "address": "0x89DaE86Eb86cBc4dd2f52031c997A21aB9a950C5",
+      "eip1167_implementation": null,
+      "verified_name": "MorphoChainlinkOracleV2",
+      "values": {
+       "BASE_FEED_1": "0x16bDf4c1A1fbD0D3a181dCee4141BB106e22B002",
+       "BASE_FEED_2": "0x0000000000000000000000000000000000000000",
+       "BASE_VAULT": "0x0000000000000000000000000000000000000000",
+       "BASE_VAULT_CONVERSION_SAMPLE": 1,
+       "QUOTE_FEED_1": "0x0000000000000000000000000000000000000000",
+       "QUOTE_FEED_2": "0x0000000000000000000000000000000000000000",
+       "QUOTE_VAULT": "0x0000000000000000000000000000000000000000",
+       "QUOTE_VAULT_CONVERSION_SAMPLE": 1,
+       "SCALE_FACTOR": 1000000,
+       "price": "987791422818366312000000"
+      },
+      "children": {
+       "BASE_FEED_1": {
+        "address": "0x16bDf4c1A1fbD0D3a181dCee4141BB106e22B002",
+        "eip1167_implementation": "0x5AAb95E3C6F9bA0CCfa0a17c2C7235633C7C6585",
+        "verified_name": "OjoPTFeed",
+        "values": {
+         "FEED_1": "0xe7d40A9A3D09108bB9119E0133b99Ac02471C100",
+         "FEED_2": "0xF5532b1df22F97a0660386958B5Dcdb94be8533C",
+         "STALENESS_THRESHOLD": 86400,
+         "decimals": 18,
+         "description": "Ojo PT Feed Pendle Chainlink-compatible Oracle",
+         "getActiveOracle": "0xF5532b1df22F97a0660386958B5Dcdb94be8533C",
+         "latestRoundData": [
+          0,
+          "987791422818366312",
+          0,
+          0,
+          0
+         ],
+         "version": 1
+        },
+        "children": {
+         "FEED_1": {
+          "address": "0xe7d40A9A3D09108bB9119E0133b99Ac02471C100",
+          "eip1167_implementation": null,
+          "verified_name": "PendleChainlinkOracle",
+          "values": {
+           "baseOracleType": 1,
+           "decimals": 18,
+           "description": "Pendle Chainlink-compatible Oracle",
+           "factory": "0x6502cda86f9110f3655512237C9FF2B9CE247c69",
+           "fromTokenScale": "1000000000000000000",
+           "latestRoundData": [
+            0,
+            "995049112724047037",
+            0,
+            1792689587,
+            0
+           ],
+           "market": "0x9C560eBaF78e596cbcC27411d633a74D628dd7dC",
+           "toTokenScale": "1000000000000000000",
+           "twapDuration": 900,
+           "version": 1
+          },
+          "children": {
+           "factory": {
+            "address": "0x6502cda86f9110f3655512237C9FF2B9CE247c69",
+            "verified_name": null
+           },
+           "market": {
+            "address": "0x9C560eBaF78e596cbcC27411d633a74D628dd7dC",
+            "verified_name": "PendleMarketV7"
+           }
+          }
+         },
+         "FEED_2": {
+          "address": "0xF5532b1df22F97a0660386958B5Dcdb94be8533C",
+          "eip1167_implementation": null,
+          "verified_name": "PendleSparkLinearDiscountOracle (inferred: bytecode equals verified 0x68EfEdb720F4fFbA213745B21756365fa8617B9b except immutables)",
+          "values": {
+           "PT": "0xdC169AbE56461A2E0c034Da431Ac2a3ebf596094",
+           "baseDiscountPerYear": "130000000000000000",
+           "decimals": 18,
+           "latestRoundData": [
+            0,
+            "987791422818366312",
+            0,
+            0,
+            0
+           ],
+           "maturity": 1795651200
+          },
+          "children": {
+           "PT": {
+            "address": "0xdC169AbE56461A2E0c034Da431Ac2a3ebf596094",
+            "verified_name": "PendlePrincipalToken"
+           }
+          },
+          "inference": {
+           "reference": "0x68EfEdb720F4fFbA213745B21756365fa8617B9b",
+           "code_bytes": 951,
+           "differing_bytes": 38,
+           "differing_runs": 5,
+           "all_runs_inside_own_immutables": true
+          }
+         }
+        }
+       }
+      }
+     },
+     "backupOracle": {
+      "address": "0x77aE9b629096D0Ae0206878b163cCa232276c88e",
+      "eip1167_implementation": null,
+      "verified_name": "MorphoChainlinkOracleV2",
+      "values": {
+       "BASE_FEED_1": "0x16bDf4c1A1fbD0D3a181dCee4141BB106e22B002",
+       "BASE_FEED_2": "0xfF30586cD0F29eD462364C7e81375FC0C71219b1",
+       "BASE_VAULT": "0x0000000000000000000000000000000000000000",
+       "BASE_VAULT_CONVERSION_SAMPLE": 1,
+       "QUOTE_FEED_1": "0xc3866d726C204C0836E0677A31973c649888973D",
+       "QUOTE_FEED_2": "0x0000000000000000000000000000000000000000",
+       "QUOTE_VAULT": "0x0000000000000000000000000000000000000000",
+       "QUOTE_VAULT_CONVERSION_SAMPLE": 1,
+       "SCALE_FACTOR": 10000000000,
+       "price": "987597746554094314917206"
+      },
+      "children": {
+       "BASE_FEED_1": {
+        "address": "0x16bDf4c1A1fbD0D3a181dCee4141BB106e22B002",
+        "eip1167_implementation": "0x5AAb95E3C6F9bA0CCfa0a17c2C7235633C7C6585",
+        "verified_name": "OjoPTFeed",
+        "values": {},
+        "children": {},
+        "see_above": true
+       },
+       "BASE_FEED_2": {
+        "address": "0xfF30586cD0F29eD462364C7e81375FC0C71219b1",
+        "eip1167_implementation": null,
+        "verified_name": "EACAggregatorProxy",
+        "values": {
+         "accessController": "0x0000000000000000000000000000000000000000",
+         "aggregator": "0x592700e4FcDd674dC54d2681DED3B63f54F63f9A",
+         "decimals": 8,
+         "description": "USDS / USD",
+         "latestAnswer": 99980393,
+         "latestRound": "18446744073709554250",
+         "latestRoundData": [
+          "18446744073709554250",
+          99980393,
+          1792640828,
+          1792640843,
+          "18446744073709554250"
+         ],
+         "latestTimestamp": 1792640843,
+         "owner": "0x21f73D42Eb58Ba49dDB685dc29D3bF5c0f0373CA",
+         "phaseId": 1,
+         "proposedAggregator": "0x0000000000000000000000000000000000000000",
+         "proposedLatestRoundData": "reverted: ('execution reverted: No proposed aggregator present', '0x08c379a000000000000000",
+         "version": 6
+        },
+        "children": {}
+       },
+       "QUOTE_FEED_1": {
+        "address": "0xc3866d726C204C0836E0677A31973c649888973D",
+        "eip1167_implementation": null,
+        "verified_name": "DummyFeed",
+        "values": {
+         "ONE": 1000000000000,
+         "decimals": 12,
+         "description": "Dummy feed with 12 decimals",
+         "getPrice": 1000000000000,
+         "latestRoundData": [
+          1,
+          1000000000000,
+          1792689587,
+          1792689587,
+          1
+         ],
+         "version": 1
+        },
+        "children": {}
+       }
+      }
+     }
+    },
+    "values_unverified_names": true
+   }
+  }
+ }
+}

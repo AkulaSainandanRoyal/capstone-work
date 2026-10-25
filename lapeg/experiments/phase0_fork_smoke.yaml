@@ -1,0 +1,19 @@
+# Phase 0 acceptance: fork mainnet, read a Morpho Blue market, snapshot, mutate, revert, confirm restored.
+# Run: python scripts/run_experiment.py experiments/phase0_fork_smoke.yaml
+name: phase0_fork_smoke
+seed: 0
+
+fork:
+  rpc_url_env: ARCHIVE_RPC_URL
+  # Used when ARCHIVE_RPC_URL is unset: free public endpoint with archive state (no key, rate-limited).
+  fallback_rpc_url: https://eth.drpc.org
+  block: 26267600           # pinned: 2026-10-25
+  anvil_args: ["--retries", "10", "--fork-retry-backoff", "1000", "--timeout", "60000"]
+
+morpho_discovery: data/discovered/morpho_blue.json
+market:
+  name: PT-reUSD-10DEC2026
+  market_id: "0x1e9d614631a7df0ec07fb05b2c8cb2491575fd1a63a33bf187a6afb295a4fc64"
+
+cache_path: data/raw/rpc_cache.sqlite
+results_dir: data/results
